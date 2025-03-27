@@ -16,8 +16,6 @@ const NeuralNetworkVisualizer = () => {
   const [problemType, setProblemType] = useState("Classification")
   const [biases, setBiases] = useState<number[][]>([])
 
-
-
   const xorData = {
     inputs: [
       [0, 0],
@@ -32,6 +30,9 @@ const NeuralNetworkVisualizer = () => {
     setIsTraining(true)
     setLoss(null)
     setEpoch(0)
+    setWeights([])
+    setBiases([])
+    setOutputs([])
 
     const model = tf.sequential()
 
@@ -39,8 +40,7 @@ const NeuralNetworkVisualizer = () => {
       tf.layers.dense({
         inputShape: [inputNeurons],
         units: hiddenLayers[0],
-        activation: activationFunction
-,
+        activation: activationFunction,
       })
     )
 
@@ -72,19 +72,16 @@ const NeuralNetworkVisualizer = () => {
           setLoss(logs?.loss?.toFixed(4) ?? null)
 
           const modelWeights = model.getWeights()
-
-          // Separate weights and biases
           const parsedWeights = await Promise.all(
             modelWeights.filter((_, i) => i % 2 === 0).map((w) => w.array())
           )
           const parsedBiases = await Promise.all(
             modelWeights.filter((_, i) => i % 2 !== 0).map((b) => b.array())
           )
-          
+
           setWeights(parsedWeights as number[][][])
           setBiases(parsedBiases as number[][])
 
-          // Predict outputs
           const pred = model.predict(xs) as tf.Tensor
           const predArray = await pred.array()
           setOutputs(predArray.map((v: any) => parseFloat(v[0].toFixed(3))))
@@ -98,19 +95,18 @@ const NeuralNetworkVisualizer = () => {
   }
 
   useEffect(() => {
-    const dummyWeights = hiddenLayers.length === 1
-      ? [
-          [
-            [0.5, -0.2],
-            [0.8, 0.3],
-          ],
-          [
-            [0.1],
-            [-0.6],
-          ],
-        ]
-      : []
-    setWeights(dummyWeights)
+    // Reset state and create default connection layout (without values)
+    const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons]
+    const defaultWeights = layerSizes.slice(0, -1).map((fromSize, i) => {
+      const toSize = layerSizes[i + 1]
+      return Array.from({ length: fromSize }, () => Array(toSize).fill(0))
+    })
+    const defaultBiases = layerSizes.slice(1).map((size) => Array(size).fill(0))
+
+    setWeights(defaultWeights)
+    setBiases(defaultBiases)
+    setOutputs([])
+    setEpoch(0)
   }, [inputNeurons, hiddenLayers, outputNeurons])
 
   return (
@@ -119,17 +115,17 @@ const NeuralNetworkVisualizer = () => {
       <div style={styles.panels}>
         <div style={styles.leftPanel}>
           <NetworkControls
-              hiddenLayers={hiddenLayers}
-              setHiddenLayers={setHiddenLayers}
-              inputNeurons={inputNeurons}
-              setInputNeurons={setInputNeurons}
-              outputNeurons={outputNeurons}
-              setOutputNeurons={setOutputNeurons}
-              activationFunction={activationFunction}
-              setActivationFunction={setActivationFunction}
-              problemType={problemType}
-              setProblemType={setProblemType}
-/>
+            hiddenLayers={hiddenLayers}
+            setHiddenLayers={setHiddenLayers}
+            inputNeurons={inputNeurons}
+            setInputNeurons={setInputNeurons}
+            outputNeurons={outputNeurons}
+            setOutputNeurons={setOutputNeurons}
+            activationFunction={activationFunction}
+            setActivationFunction={setActivationFunction}
+            problemType={problemType}
+            setProblemType={setProblemType}
+          />
 
           <button onClick={trainModel} disabled={isTraining} style={styles.trainBtn}>
             {isTraining ? "Training..." : "Train"}
@@ -151,13 +147,13 @@ const NeuralNetworkVisualizer = () => {
         </div>
 
         <div style={styles.rightPanel}>
-        <NetworkGraph
-          inputNeurons={inputNeurons}
-          hiddenLayers={hiddenLayers}
-          outputNeurons={outputNeurons}
-          weights={weights}
-          biases={biases}
-/>
+          <NetworkGraph
+            inputNeurons={inputNeurons}
+            hiddenLayers={hiddenLayers}
+            outputNeurons={outputNeurons}
+            weights={weights}
+            biases={biases}
+          />
         </div>
       </div>
     </div>
