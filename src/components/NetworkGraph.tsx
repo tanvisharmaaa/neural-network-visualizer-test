@@ -1,11 +1,23 @@
-import React from "react"
+// ✅ NetworkGraph.tsx
+import React, { useEffect, useState } from "react";
+
+interface Pulse {
+  from: { x: number; y: number };
+  to: { x: number; y: number };
+  progress: number;
+  direction: "forward" | "backward";
+}
 
 interface Props {
-  inputNeurons: number
-  hiddenLayers: number[]
-  outputNeurons: number
-  weights: number[][][]
-  biases: number[][]
+  inputNeurons: number;
+  hiddenLayers: number[];
+  outputNeurons: number;
+  weights: number[][][];
+  biases: number[][];
+  activationFunction: string;
+  pulses: Pulse[];
+  neuronEquations: Map<string, string>;
+  neuronValues: Map<string, number>;
 }
 
 const NetworkGraph: React.FC<Props> = ({
@@ -14,160 +26,195 @@ const NetworkGraph: React.FC<Props> = ({
   outputNeurons,
   weights,
   biases,
+  activationFunction,
+  pulses,
+  neuronEquations,
+  neuronValues,
 }) => {
-  const layers = [inputNeurons, ...hiddenLayers, outputNeurons]
-  const neuronRadius = 20
-  const hSpacing = 120
-  const vSpacing = 70
+  const layers = [inputNeurons, ...hiddenLayers, outputNeurons];
+  const neuronRadius = 20;
+  const hSpacing = 140;
+  const vSpacing = 80;
+
+  const [justUpdatedNeurons, setJustUpdatedNeurons] = useState<
+    { layer: number; index: number }[]
+  >([]);
 
   const positions: { x: number; y: number }[][] = layers.map((count, layerIdx) => {
-    const totalHeight = (count - 1) * vSpacing
+    const totalHeight = (count - 1) * vSpacing;
     return Array.from({ length: count }, (_, neuronIdx) => ({
-      x: layerIdx * hSpacing + 50,
+      x: layerIdx * hSpacing + 70,
       y: neuronIdx * vSpacing - totalHeight / 2 + 200,
-    }))
-  })
+    }));
+  });
 
-  const isTrained = weights.length > 0 && biases.length > 0
+  useEffect(() => {
+    const updated: { layer: number; index: number }[] = [];
+
+    pulses.forEach((pulse) => {
+      if (pulse.progress >= 1) {
+        positions.forEach((layer, layerIdx) => {
+          layer.forEach((pos, idx) => {
+            if (Math.abs(pulse.to.x - pos.x) < 1 && Math.abs(pulse.to.y - pos.y) < 1) {
+              const alreadyUpdated = justUpdatedNeurons.some(
+                (n) => n.layer === layerIdx && n.index === idx
+              );
+              if (!alreadyUpdated) {
+                updated.push({ layer: layerIdx, index: idx });
+              }
+            }
+          });
+        });
+      }
+    });
+
+    if (updated.length > 0) {
+      setJustUpdatedNeurons((prev) => [...prev, ...updated]);
+      setTimeout(() => {
+        setJustUpdatedNeurons((prev) =>
+          prev.filter((n) => !updated.some((u) => u.layer === n.layer && u.index === n.index))
+        );
+      }, 500);
+    }
+  }, [pulses]);
+
+  const isTrained = weights.length > 0 && biases.length > 0;
 
   return (
-    <svg width="100%" height="500" style={{ backgroundColor: "#1e1e2f" }}>
-      <defs>
-        <linearGradient id="flowGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#00f" stopOpacity="0" />
-          <stop offset="50%" stopColor="#00f" stopOpacity="0.6" />
-          <stop offset="100%" stopColor="#00f" stopOpacity="0" />
-        </linearGradient>
-      </defs>
+    <div style={{ position: "relative", paddingBottom: "100px" }}>
+      <svg width="100%" height="600">
+        <defs>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
 
-      {/* Input lines */}
-      {positions[0]?.map((neuron, i) => (
-        <line
-          key={`input-line-${i}`}
-          x1={neuron.x - 120}
-          y1={neuron.y}
-          x2={neuron.x - 10}
-          y2={neuron.y}
-          stroke="yellow"
-          strokeWidth={2}
-          strokeDasharray="4"
-          opacity={0.7}
-        />
-      ))}
+          <linearGradient id="pulseForward" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ffb347" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#ffcc80" stopOpacity="0.8" />
+          </linearGradient>
 
-      {/* Output lines */}
-      {positions[positions.length - 1]?.map((neuron, i) => (
-        <line
-          key={`output-line-${i}`}
-          x1={neuron.x + 10}
-          y1={neuron.y}
-          x2={neuron.x + 120}
-          y2={neuron.y}
-          stroke="yellow"
-          strokeWidth={2}
-          strokeDasharray="4"
-          opacity={0.7}
-        />
-      ))}
+          <linearGradient id="pulseBackward" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ff6b81" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#ffa3b1" stopOpacity="0.8" />
+          </linearGradient>
+        </defs>
 
-      {/* Flow lines between neurons */}
-      {positions.slice(0, -1).map((fromLayer, i) => {
-        const toLayer = positions[i + 1]
-        return fromLayer.map((from, fromIdx) =>
-          toLayer.map((to, toIdx) => (
-            <line
-              key={`flow-${i}-${fromIdx}-${toIdx}`}
-              x1={from.x}
-              y1={from.y}
-              x2={to.x}
-              y2={to.y}
-              stroke="url(#flowGradient)"
-              strokeWidth={1}
-              strokeDasharray="5,5"
-              opacity={0.3}
-            />
-          ))
-        )
-      })}
+        {positions.slice(0, -1).map((fromLayer, layerIdx) => {
+          const toLayer = positions[layerIdx + 1];
+          return fromLayer.map((from, fromIdx) =>
+            toLayer.map((to, toIdx) => (
+              <line
+                key={`conn-${layerIdx}-${fromIdx}-${toIdx}`}
+                x1={from.x}
+                y1={from.y}
+                x2={to.x}
+                y2={to.y}
+                stroke="#aac4f6"
+                strokeWidth={2}
+                opacity={0.6}
+              />
+            ))
+          );
+        })}
 
-      {/* Trained weights */}
-      {isTrained && weights.map((layerWeights, layerIdx) =>
-        layerWeights.map((fromWeights, fromIdx) =>
-          fromWeights.map((weight, toIdx) => {
-            const from = positions[layerIdx]?.[fromIdx]
-            const to = positions[layerIdx + 1]?.[toIdx]
-            if (!from || !to) return null
-
-            const isZero = weight === 0
-            const opacity = isZero ? 0.3 : Math.min(Math.abs(weight) * 5, 1)
-            const color = isZero ? "#aaa" : weight > 0 ? "#3498db" : "#e74c3c"
-            
-
-
-            const midX = (from.x + to.x) / 2
-            const midY = (from.y + to.y) / 2
-
-            return (
-              <g key={`${layerIdx}-${fromIdx}-${toIdx}`}>
-                <line
-                  x1={from.x}
-                  y1={from.y}
-                  x2={to.x}
-                  y2={to.y}
-                  stroke={color}
-                  strokeWidth={2}
-                  opacity={opacity}
-                />
-                <text
-                  x={midX}
-                  y={midY}
-                  fill="#ccc"
-                  fontSize="10"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                >
-                  {weight.toFixed(2)}
-                </text>
-              </g>
-            )
-          })
-        )
-      )}
-
-      {/* Neurons and biases */}
-      {positions.map((layer, layerIdx) =>
-        layer.map((pos, neuronIdx) => {
-          const biasLayerIdx = layerIdx - 1
-          const biasVal = biases?.[biasLayerIdx]?.[neuronIdx]
+        {pulses.map((pulse, idx) => {
+          const { from, to, progress, direction } = pulse;
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          const directionFactor = direction === "forward" ? 1 : -1;
+          const offset = directionFactor * (neuronRadius / length) * 0.5;
+          const adjustedProgress = Math.min(Math.max(progress + offset, 0), 1);
+          const cx = from.x + dx * adjustedProgress;
+          const cy = from.y + dy * adjustedProgress;
 
           return (
-            <g key={`n-${layerIdx}-${neuronIdx}`}>
-              <circle
-                cx={pos.x}
-                cy={pos.y}
-                r={neuronRadius}
-                fill="#fff"
-                stroke="#3498db"
-                strokeWidth={2}
-              />
-              {isTrained && layerIdx > 0 && biasVal !== undefined && (
-                <text
-                  x={pos.x}
-                  y={pos.y}
-                  fill="#000"
-                  fontSize="10"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                >
-                  {biasVal.toFixed(2)}
-                </text>
-              )}
-            </g>
-          )
-        })
-      )}
-    </svg>
-  )
-}
+            <circle
+              key={`pulse-${idx}`}
+              cx={cx}
+              cy={cy}
+              r={5}
+              fill={direction === "forward" ? "url(#pulseForward)" : "url(#pulseBackward)"}
+              opacity={0.9}
+            />
+          );
+        })}
 
-export default NetworkGraph
+        {positions.map((layer, layerIdx) =>
+          layer.map((pos, neuronIdx) => {
+            const isUpdated = justUpdatedNeurons.some(
+              (n) => n.layer === layerIdx && n.index === neuronIdx
+            );
+            const key = `${layerIdx}-${neuronIdx}`;
+            const value = neuronValues.get(key);
+            const equation = neuronEquations.get(key);
+
+            return (
+              <g key={`n-${layerIdx}-${neuronIdx}`}>
+                <circle
+                  cx={pos.x}
+                  cy={pos.y}
+                  r={neuronRadius}
+                  fill="#ffffff"
+                  stroke={isUpdated ? "#2ecc71" : "#6ba4ff"}
+                  strokeWidth={3}
+                  filter={isUpdated ? "url(#glow)" : "none"}
+                />
+
+                {isTrained && value !== undefined && !isNaN(value) && (
+                  <text
+                    x={pos.x}
+                    y={pos.y}
+                    fill="#444"
+                    fontSize="10"
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                  >
+                    {value.toFixed(2)}
+                  </text>
+                )}
+
+                {isTrained && equation && (
+                  <text
+                    x={pos.x}
+                    y={pos.y - 30}
+                    fill="#555"
+                    fontSize="10"
+                    textAnchor="middle"
+                  >
+                    {equation}
+                  </text>
+                )}
+              </g>
+            );
+          })
+        )}
+      </svg>
+
+      {isTrained && (
+        <div style={{
+          textAlign: "center",
+          marginTop: "20px",
+          fontSize: "16px",
+          color: "#555",
+          background: "#f8f8f8",
+          padding: "10px",
+          borderRadius: "10px",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+          maxWidth: "600px",
+          marginLeft: "auto",
+          marginRight: "auto",
+        }}>
+          <div><b>Equation:</b> z = Σ(wx) + b</div>
+          <div><b>Activation:</b> {activationFunction}(z)</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default NetworkGraph;
