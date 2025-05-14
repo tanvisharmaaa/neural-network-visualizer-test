@@ -1,5 +1,4 @@
-// ✅ NetworkGraph.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface Pulse {
   from: { x: number; y: number };
@@ -18,6 +17,8 @@ interface Props {
   pulses: Pulse[];
   neuronEquations: Map<string, string>;
   neuronValues: Map<string, number>;
+  neuronGradients: Map<string, number>;
+  showWeights: boolean;
 }
 
 const NetworkGraph: React.FC<Props> = ({
@@ -30,6 +31,8 @@ const NetworkGraph: React.FC<Props> = ({
   pulses,
   neuronEquations,
   neuronValues,
+  neuronGradients,
+  showWeights,
 }) => {
   const layers = [inputNeurons, ...hiddenLayers, outputNeurons];
   const neuronRadius = 20;
@@ -92,6 +95,22 @@ const NetworkGraph: React.FC<Props> = ({
             </feMerge>
           </filter>
 
+          <filter id="errorGlowHigh">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          <filter id="errorGlowMed">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
           <linearGradient id="pulseForward" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#ffb347" stopOpacity="0.8" />
             <stop offset="100%" stopColor="#ffcc80" stopOpacity="0.8" />
@@ -103,24 +122,42 @@ const NetworkGraph: React.FC<Props> = ({
           </linearGradient>
         </defs>
 
+        {/* Connection Lines */}
         {positions.slice(0, -1).map((fromLayer, layerIdx) => {
           const toLayer = positions[layerIdx + 1];
           return fromLayer.map((from, fromIdx) =>
-            toLayer.map((to, toIdx) => (
-              <line
-                key={`conn-${layerIdx}-${fromIdx}-${toIdx}`}
-                x1={from.x}
-                y1={from.y}
-                x2={to.x}
-                y2={to.y}
-                stroke="#aac4f6"
-                strokeWidth={2}
-                opacity={0.6}
-              />
-            ))
+            toLayer.map((to, toIdx) => {
+              const weight =
+                weights[layerIdx]?.[fromIdx]?.[toIdx] ?? null;
+              return (
+                <g key={`line-${layerIdx}-${fromIdx}-${toIdx}`}>
+                  <line
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
+                    stroke="#aac4f6"
+                    strokeWidth={2}
+                    opacity={0.6}
+                  />
+                  {showWeights && weight !== null && (
+                    <text
+                      x={(from.x + to.x) / 2}
+                      y={(from.y + to.y) / 2 - 6}
+                      fontSize="10"
+                      fill="#444"
+                      textAnchor="middle"
+                    >
+                      w={weight.toFixed(2)}
+                    </text>
+                  )}
+                </g>
+              );
+            })
           );
         })}
 
+        {/* Pulse Animation */}
         {pulses.map((pulse, idx) => {
           const { from, to, progress, direction } = pulse;
           const dx = to.x - from.x;
@@ -137,21 +174,29 @@ const NetworkGraph: React.FC<Props> = ({
               key={`pulse-${idx}`}
               cx={cx}
               cy={cy}
-              r={5}
+              r={6}
               fill={direction === "forward" ? "url(#pulseForward)" : "url(#pulseBackward)"}
               opacity={0.9}
+              style={{ filter: direction === "backward" ? "url(#glow)" : "none" }}
             />
           );
         })}
 
+        {/* Neurons */}
         {positions.map((layer, layerIdx) =>
           layer.map((pos, neuronIdx) => {
+            const key = `${layerIdx}-${neuronIdx}`;
             const isUpdated = justUpdatedNeurons.some(
               (n) => n.layer === layerIdx && n.index === neuronIdx
             );
-            const key = `${layerIdx}-${neuronIdx}`;
             const value = neuronValues.get(key);
             const equation = neuronEquations.get(key);
+            const gradient = neuronGradients.get(key) || 0;
+
+            let glowFilter = "none";
+            if (gradient > 0.6) glowFilter = "url(#errorGlowHigh)";
+            else if (gradient > 0.3) glowFilter = "url(#errorGlowMed)";
+            else if (isUpdated) glowFilter = "url(#glow)";
 
             return (
               <g key={`n-${layerIdx}-${neuronIdx}`}>
@@ -160,9 +205,9 @@ const NetworkGraph: React.FC<Props> = ({
                   cy={pos.y}
                   r={neuronRadius}
                   fill="#ffffff"
-                  stroke={isUpdated ? "#2ecc71" : "#6ba4ff"}
-                  strokeWidth={3}
-                  filter={isUpdated ? "url(#glow)" : "none"}
+                  stroke="#6ba4ff"
+                  strokeWidth={2.5}
+                  filter={glowFilter}
                 />
 
                 {isTrained && value !== undefined && !isNaN(value) && (
@@ -181,7 +226,7 @@ const NetworkGraph: React.FC<Props> = ({
                 {isTrained && equation && (
                   <text
                     x={pos.x}
-                    y={pos.y - 30}
+                    y={pos.y - 28}
                     fill="#555"
                     fontSize="10"
                     textAnchor="middle"
@@ -194,25 +239,6 @@ const NetworkGraph: React.FC<Props> = ({
           })
         )}
       </svg>
-
-      {isTrained && (
-        <div style={{
-          textAlign: "center",
-          marginTop: "20px",
-          fontSize: "16px",
-          color: "#555",
-          background: "#f8f8f8",
-          padding: "10px",
-          borderRadius: "10px",
-          boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-          maxWidth: "600px",
-          marginLeft: "auto",
-          marginRight: "auto",
-        }}>
-          <div><b>Equation:</b> z = Σ(wx) + b</div>
-          <div><b>Activation:</b> {activationFunction}(z)</div>
-        </div>
-      )}
     </div>
   );
 };

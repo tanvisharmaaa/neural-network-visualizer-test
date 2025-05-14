@@ -1,4 +1,4 @@
-// ✅ NetworkControls.tsx
+// NetworkControls.tsx
 import React from "react";
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   setActivationFunction: (val: string) => void;
   problemType: string;
   setProblemType: (val: string) => void;
+  showWeights: boolean;
+  setShowWeights: (val: boolean) => void;
 }
 
 const NetworkControls: React.FC<Props> = ({
@@ -25,6 +27,8 @@ const NetworkControls: React.FC<Props> = ({
   setActivationFunction,
   problemType,
   setProblemType,
+  showWeights,
+  setShowWeights,
 }) => {
   const updateLayer = (index: number, value: number) => {
     const updated = [...hiddenLayers];
@@ -73,6 +77,19 @@ const NetworkControls: React.FC<Props> = ({
         />
       </div>
 
+      <div>
+        <label>Epochs</label>
+        <input
+          type="number"
+          defaultValue={5}
+          min={1}
+          onChange={(e) => {
+            const val = Math.max(1, parseInt(e.target.value));
+            localStorage.setItem("numEpochs", val.toString());
+          }}
+        />
+      </div>
+
       <div className="mt-2">
         <label>Hidden Layers</label>
         <button onClick={addLayer} style={{ marginLeft: 10 }}>+ Add Layer</button>
@@ -85,6 +102,17 @@ const NetworkControls: React.FC<Props> = ({
           <button onClick={() => updateLayer(idx, 1)}>+</button>
         </div>
       ))}
+
+      <div style={{ marginTop: 10 }}>
+        <label>
+          <input
+            type="checkbox"
+            checked={showWeights}
+            onChange={(e) => setShowWeights(e.target.checked)}
+          />
+          Show Weights on Edges
+        </label>
+      </div>
     </div>
   );
 };
