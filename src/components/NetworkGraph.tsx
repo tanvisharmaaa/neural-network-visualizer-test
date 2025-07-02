@@ -18,6 +18,7 @@ interface Props {
   problemType: string;
   currentInputs: number[];
   outputs: number[];
+  hasDataset: boolean;
 }
 
 const NetworkGraph: React.FC<Props> = ({
@@ -38,9 +39,10 @@ const NetworkGraph: React.FC<Props> = ({
   problemType,
   currentInputs,
   outputs,
+  hasDataset,
 }) => {
   useEffect(() => {
-    console.log("NetworkGraph rerendered with weights:", weights.map(w => w.map(row => row.map(val => val.toFixed(2)))));
+    console.log("NetworkGraph rerendered with weights:", weights.map(w => (w ? w.map(row => row.map(val => val.toFixed(2))) : [])));
     console.log("Neuron equations:", Array.from(neuronEquations.entries()));
     console.log("Layer sizes:", [inputNeurons, ...hiddenLayers, outputNeurons]);
     console.log("Pulses:", pulses);
@@ -93,9 +95,9 @@ const NetworkGraph: React.FC<Props> = ({
   };
 
   const getNeuronEquation = (layerIdx: number, neuronIdx: number) => {
-    if (layerIdx === 0) return "Input Neuron";
+    if (!hasDataset || layerIdx === 0) return "";
     const incomingWeights = weights[layerIdx - 1]?.map(row => row[neuronIdx] ?? 0) || [];
-    const bias = biases[layerIdx]?.[neuronIdx] ?? 0;
+    const bias = biases[layerIdx - 1]?.[neuronIdx] ?? 0;
     const terms = incomingWeights.map((w, i) => {
       const inputLabel = layerIdx === 1 ? `x${i + 1}` : `h${i + 1}`;
       return `${w.toFixed(2)}·${inputLabel}`;
@@ -103,7 +105,23 @@ const NetworkGraph: React.FC<Props> = ({
     return `z = ${terms} + ${bias.toFixed(2)}`;
   };
 
-  const truncateEquation = (equation: string, maxLength: number = 20) => {
+  const getOutputEquations = () => {
+    if (!hasDataset) return "";
+    const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
+    const outputLayerIdx = layerSizes.length - 1;
+    const equations: string[] = [];
+    for (let neuronIdx = 0; neuronIdx < outputNeurons; neuronIdx++) {
+      const incomingWeights = weights[outputLayerIdx - 1]?.map(row => row[neuronIdx] ?? 0) || [];
+      const bias = biases[outputLayerIdx - 1]?.[neuronIdx] ?? 0;
+      const inputLabels = incomingWeights.map((_, i) => `h${i + 1}`);
+      const terms = incomingWeights.map((w, i) => `${w.toFixed(2)}·${inputLabels[i]}`).join(" + ");
+      const activation = problemType === "Classification" && outputNeurons > 1 ? "softmax" : "sigmoid";
+      equations.push(`o${neuronIdx + 1} = ${activation}(${terms} + ${bias.toFixed(2)})`);
+    }
+    return equations.join(" | ");
+  };
+
+  const truncateEquation = (equation: string, maxLength: number = 200) => {
     if (equation.length > maxLength) {
       return equation.substring(0, maxLength - 3) + "...";
     }
@@ -117,10 +135,10 @@ const NetworkGraph: React.FC<Props> = ({
     for (let layerIdx = 0; layerIdx < layerSizes.length - 1; layerIdx++) {
       const fromSize = layerSizes[layerIdx];
       const toSize = layerSizes[layerIdx + 1];
-      const weights = fromSize * toSize;
-      const biases = toSize;
-      totalParams += weights + biases;
-      paramBreakdown.push(`Layer ${layerIdx}→${layerIdx + 1}: ${weights} weights + ${biases} biases`);
+      const weightsCount = fromSize * toSize;
+      const biasesCount = toSize;
+      totalParams += weightsCount + biasesCount;
+      paramBreakdown.push(`Layer ${layerIdx}→${layerIdx + 1}: ${weightsCount} weights + ${biasesCount} biases`);
     }
     console.log(`Parameter breakdown: ${paramBreakdown.join(", ")} | Total: ${totalParams}`);
     return totalParams;
@@ -129,9 +147,10 @@ const NetworkGraph: React.FC<Props> = ({
   const positions = getNeuronPositions();
   const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
   const totalParams = calculateTotalParameters();
+  const outputEquations = getOutputEquations();
 
   const outputLayerIdx = layerSizes.length - 1;
-  const outputEquations = Array(outputNeurons).fill(0).map((_, neuronIdx) => {
+  const outputEqs = Array(outputNeurons).fill(0).map((_, neuronIdx) => {
     const key = `${outputLayerIdx}-${neuronIdx}`;
     return neuronEquations.get(key) || getNeuronEquation(outputLayerIdx, neuronIdx);
   });
@@ -149,10 +168,10 @@ const NetworkGraph: React.FC<Props> = ({
   };
 
   const svgWidth = layerSizes.length * 150 + 100;
-  const svgHeight = Math.max(...layerSizes) * 100 + 300;
+  const svgHeight = Math.max(...layerSizes) * 100 + 400;
 
   return (
-    <svg width="100%" height="700" viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ backgroundColor: "#e6f3ff" }}>
+    <svg width="100%" height="800" viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ backgroundColor: "#ffffff" }}>
       <defs>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
@@ -195,7 +214,7 @@ const NetworkGraph: React.FC<Props> = ({
                     strokeWidth={strokeWidth}
                     opacity="0.8"
                   />
-                  {showWeights && neuronValues.size > 0 && weight !== 0 && (
+                  {showWeights && neuronValues.size > 0 && weight !== 0 && hasDataset && (
                     <text
                       x={midX}
                       y={midY + offsetY + staggerY}
@@ -214,115 +233,90 @@ const NetworkGraph: React.FC<Props> = ({
           );
         })}
 
-{positions.map((pos, i) => {
-  let layerIdx = 0;
-  let neuronIdx = i;
-  for (let l = 0; l < layerSizes.length; l++) {
-    if (neuronIdx < layerSizes[l]) {
-      layerIdx = l;
-      break;
-    }
-    neuronIdx -= layerSizes[l];
-  }
-  const strokeColor = layerIdx === 0 ? "#ADD8E6" : layerIdx <= hiddenLayers.length ? "#90EE90" : "#FFA07A";
-  const glowIntensity = getGlowIntensity(layerIdx, neuronIdx);
-  const glowFilter = glowIntensity > 0 ? `url(#glow) drop-shadow(0 0 ${glowIntensity}px ${strokeColor})` : "none";
+        {positions.map((pos, i) => {
+          let layerIdx = 0;
+          let neuronIdx = i;
+          for (let l = 0; l < layerSizes.length; l++) {
+            if (neuronIdx < layerSizes[l]) {
+              layerIdx = l;
+              break;
+            }
+            neuronIdx -= layerSizes[l];
+          }
+          const strokeColor = layerIdx === 0 ? "#ADD8E6" : layerIdx <= hiddenLayers.length ? "#90EE90" : "#FFA07A";
+          const glowIntensity = getGlowIntensity(layerIdx, neuronIdx);
+          const glowFilter = glowIntensity > 0 ? `url(#glow) drop-shadow(0 0 ${glowIntensity}px ${strokeColor})` : "none";
 
-  const equationKey = `${layerIdx}-${neuronIdx}`;
-  const fullEquation = neuronEquations.get(equationKey) || getNeuronEquation(layerIdx, neuronIdx);
-  const displayedEquation = truncateEquation(fullEquation);
+          const equationKey = `${layerIdx}-${neuronIdx}`;
+          const fullEquation = neuronEquations.get(equationKey) || getNeuronEquation(layerIdx, neuronIdx);
 
-  const isOutputLayer = layerIdx === layerSizes.length - 1;
-  const outputValue = isOutputLayer && outputs.length > 0 ? outputs[neuronIdx]?.toFixed(2) : null;
+          const isOutputLayer = layerIdx === layerSizes.length - 1;
+          const outputValue = isOutputLayer && outputs.length > 0 ? outputs[neuronIdx]?.toFixed(2) : null;
 
-  return (
-    <g key={i}>
-      <circle
-        cx={pos.x}
-        cy={pos.y}
-        r="20"
-        fill="white"
-        stroke={strokeColor}
-        strokeWidth="2"
-        style={{ filter: glowFilter }}
-      />
-      <title>{fullEquation !== "Input Neuron" ? fullEquation : ""}</title>
-      <text
-        x={pos.x}
-        y={pos.y}
-        textAnchor="middle"
-        dominantBaseline="middle"
-        fontSize="12"
-      >
-        {layerIdx === 0
-          ? `x${neuronIdx + 1}`
-          : layerIdx <= hiddenLayers.length
-          ? `h${i - inputNeurons + 1}`
-          : `o${i - inputNeurons - hiddenLayers.reduce((a, b) => a + b, 0) + 1}`}
-      </text>
-      {layerIdx === 0 && currentInputs.length > neuronIdx && (
-        <text
-          x={pos.x}
-          y={pos.y + 25}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontSize="10"
-          fill="#666"
-        >
-          {currentInputs[neuronIdx].toFixed(2)}
-        </text>
-      )}
-      {neuronValues.size > 0 && !isOutputLayer && (
-        <text
-          x={pos.x}
-          y={pos.y + 25}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontSize="10"
-          fill="#666"
-        >
-          {neuronValues.get(`${layerIdx}-${neuronIdx}`)?.toFixed(2) || ""}
-        </text>
-      )}
-      {isOutputLayer && outputs.length > 0 && outputValue && (
-        <text
-          x={pos.x + 50}
-          y={pos.y}
-          textAnchor="start"
-          dominantBaseline="middle"
-          fontSize="10"
-          fill="#333"
-        >
-          {`Output: ${outputValue}`}
-        </text>
-      )}
-      {isOutputLayer && outputs.length > 0 && displayedEquation && (
-        <text
-          x={pos.x + 50}
-          y={pos.y + 15}
-          textAnchor="start"
-          dominantBaseline="middle"
-          fontSize="9"
-          fill="#333"
-        >
-          {`Eq: ${displayedEquation}`}
-        </text>
-      )}
-      {neuronValues.size > 0 && !isOutputLayer && displayedEquation && (
-        <text
-          x={pos.x}
-          y={pos.y - 40}
-          textAnchor="middle"
-          dominantBaseline="middle"
-          fontSize="9"
-          fill="#333"
-        >
-          {displayedEquation}
-        </text>
-      )}
-    </g>
-  );
-})}
+          return (
+            <g key={i}>
+              <circle
+                cx={pos.x}
+                cy={pos.y}
+                r="20"
+                fill="white"
+                stroke={strokeColor}
+                strokeWidth="2"
+                style={{ filter: glowFilter }}
+              />
+              <title>{fullEquation !== "" ? fullEquation : ""}</title>
+              <text
+                x={pos.x}
+                y={pos.y}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fontSize="12"
+              >
+                {layerIdx === 0
+                  ? `x${neuronIdx + 1}`
+                  : layerIdx <= hiddenLayers.length
+                  ? `h${i - inputNeurons + 1}`
+                  : `o${i - inputNeurons - hiddenLayers.reduce((a, b) => a + b, 0) + 1}`}
+              </text>
+              {layerIdx === 0 && currentInputs.length > neuronIdx && (
+                <text
+                  x={pos.x}
+                  y={pos.y + 25}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="10"
+                  fill="#666"
+                >
+                  {currentInputs[neuronIdx].toFixed(2)}
+                </text>
+              )}
+              {neuronValues.size > 0 && !isOutputLayer && (
+                <text
+                  x={pos.x}
+                  y={pos.y + 25}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fontSize="10"
+                  fill="#666"
+                >
+                  {neuronValues.get(`${layerIdx}-${neuronIdx}`)?.toFixed(2) || ""}
+                </text>
+              )}
+              {isOutputLayer && outputs.length > 0 && outputValue && (
+                <text
+                  x={pos.x + 50}
+                  y={pos.y}
+                  textAnchor="start"
+                  dominantBaseline="middle"
+                  fontSize="10"
+                  fill="#333"
+                >
+                  {`Output: ${outputValue}`}
+                </text>
+              )}
+            </g>
+          );
+        })}
 
         {pulses.map((pulse, i) => {
           const t = pulse.progress;
@@ -346,7 +340,7 @@ const NetworkGraph: React.FC<Props> = ({
 
       <text
         x={50}
-        y={svgHeight - 50}
+        y={svgHeight - 100}
         textAnchor="start"
         dominantBaseline="middle"
         fontSize="12"
@@ -354,6 +348,18 @@ const NetworkGraph: React.FC<Props> = ({
       >
         {`Epoch: ${epochDisplay} | Total Parameters: ${totalParams} | Activation: ${activationFunction} | Problem Type: ${problemType}`}
       </text>
+      {hasDataset && outputEquations && (
+        <text
+          x={50}
+          y={svgHeight - 60}
+          textAnchor="start"
+          dominantBaseline="middle"
+          fontSize="14"
+          fill="#333"
+        >
+          {outputEquations}
+        </text>
+      )}
     </svg>
   );
 };
