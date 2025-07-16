@@ -106,7 +106,7 @@ const NetworkGraph: React.FC<Props> = ({
   };
 
   const getOutputEquations = () => {
-    if (!hasDataset) return "";
+    if (!hasDataset) return [];
     const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
     const outputLayerIdx = layerSizes.length - 1;
     const equations: string[] = [];
@@ -118,7 +118,7 @@ const NetworkGraph: React.FC<Props> = ({
       const activation = problemType === "Classification" && outputNeurons > 1 ? "softmax" : "sigmoid";
       equations.push(`o${neuronIdx + 1} = ${activation}(${terms} + ${bias.toFixed(2)})`);
     }
-    return equations.join(" | ");
+    return equations;
   };
 
   const truncateEquation = (equation: string, maxLength: number = 200) => {
@@ -197,7 +197,8 @@ const NetworkGraph: React.FC<Props> = ({
               const midY = (from.y + to.y) / 2;
 
               const weight = weights[layerIdx]?.[fromIdx]?.[toIdx] ?? 0;
-              const strokeColor = "#888888";
+              const isActive = pulses.some(p => p.layerIdx === layerIdx && p.fromIdx === fromIdx && p.toIdx === toIdx);
+              const strokeColor = isActive && pulses.some(p => p.direction === "backward") ? "#ff0000" : "#888888";
               const strokeWidth = lineThicknessMode === "auto" ? 1 + Math.abs(weight) * 2 : 2;
 
               const staggerY = toIdx * 10;
@@ -214,7 +215,7 @@ const NetworkGraph: React.FC<Props> = ({
                     strokeWidth={strokeWidth}
                     opacity="0.8"
                   />
-                  {showWeights && neuronValues.size > 0 && weight !== 0 && hasDataset && (
+                  {showWeights && hasDataset && weight !== 0 && (
                     <text
                       x={midX}
                       y={midY + offsetY + staggerY}
@@ -348,18 +349,19 @@ const NetworkGraph: React.FC<Props> = ({
       >
         {`Epoch: ${epochDisplay} | Total Parameters: ${totalParams} | Activation: ${activationFunction} | Problem Type: ${problemType}`}
       </text>
-      {hasDataset && outputEquations && (
+      {hasDataset && outputEquations.length > 0 && outputEquations.map((equation, index) => (
         <text
+          key={index}
           x={50}
-          y={svgHeight - 60}
+          y={svgHeight - 60 + index * 20}
           textAnchor="start"
           dominantBaseline="middle"
           fontSize="14"
           fill="#333"
         >
-          {outputEquations}
+          {truncateEquation(equation)}
         </text>
-      )}
+      ))}
     </svg>
   );
 };
