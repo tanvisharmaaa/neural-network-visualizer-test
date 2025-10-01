@@ -19,6 +19,9 @@ interface Props {
   currentInputs: number[];
   outputs: number[];
   hasDataset: boolean;
+  isTrained: boolean;
+  displayedWeights: Map<string, number>;
+  displayedConnections?: any;
 }
 
 const NetworkGraph: React.FC<Props> = ({
@@ -31,7 +34,7 @@ const NetworkGraph: React.FC<Props> = ({
   pulses,
   neuronEquations,
   neuronValues,
-  neuronGradients,
+  neuronGradients, 
   showWeights,
   lineThicknessMode,
   zoomLevel,
@@ -40,29 +43,18 @@ const NetworkGraph: React.FC<Props> = ({
   currentInputs,
   outputs,
   hasDataset,
+  isTrained,
+  displayedWeights,
 }) => {
   useEffect(() => {
-    console.log("NetworkGraph rerendered with weights:", weights.map(w => (w ? w.map(row => row.map(val => val.toFixed(2))) : [])));
-    console.log("Neuron equations:", Array.from(neuronEquations.entries()));
-    console.log("Layer sizes:", [inputNeurons, ...hiddenLayers, outputNeurons]);
-    console.log("Pulses:", pulses);
-    console.log("Current inputs:", currentInputs);
-    console.log("Outputs:", outputs);
-  }, [weights, neuronEquations, pulses, currentInputs, outputs]);
+    console.log("NetworkGraph rerendered with weights:", weights.map(w => (w ? w.map(row => row.map(val => val?.toFixed(2) || "0")) : [])));
+    console.log("Displayed Weights:", Array.from(displayedWeights.entries()));
+    console.log("Neuron Values:", Array.from(neuronValues.entries()));
+  }, [weights, displayedWeights, neuronValues]);
 
-  useEffect(() => {
-    console.log("NetworkGraph rerendered with epochDisplay:", epochDisplay);
-  }, [epochDisplay]);
-
-  useEffect(() => {
-    console.log("NetworkGraph mounted");
-    return () => {
-      console.log("NetworkGraph unmounted");
-    };
-  }, []);
+  const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
 
   const getNeuronPositions = () => {
-    const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
     const positions: { x: number; y: number }[] = [];
     let neuronIndex = 0;
     layerSizes.forEach((count, layerIdx) => {
@@ -79,23 +71,66 @@ const NetworkGraph: React.FC<Props> = ({
   };
 
   const getNeuronIndex = (layerIdx: number, neuronIdx: number) => {
-    const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
     let index = 0;
-    for (let i = 0; i < layerIdx; i++) {
-      index += layerSizes[i];
-    }
+    for (let i = 0; i < layerIdx; i++) index += layerSizes[i];
     return index + neuronIdx;
   };
 
-  const getGlowIntensity = (layerIdx: number, neuronIdx: number) => {
-    if (layerIdx === 0) return 0;
-    const activation = neuronValues.get(`${layerIdx}-${neuronIdx}`) ?? 0;
-    const intensity = Math.min(Math.abs(activation) * 5, 15);
-    return intensity;
+  /**
+   * Compute per-layer normalization so glow scales well across different weight magnitudes.
+   * For each layer L>0, compute max over neurons of avg(|incoming weights|).
+   */
+  const layerMaxAvgAbsIncoming: number[] = (() => {
+    const maxes: number[] = Array(layerSizes.length).fill(1); // default 1 to avoid divide-by-zero
+    for (let L = 1; L < layerSizes.length; L++) {
+      const prevSize = layerSizes[L - 1];
+      const thisSize = layerSizes[L];
+      const W = weights[L - 1] || []; // shape [prevSize][thisSize]
+      let layerMax = 0;
+      for (let j = 0; j < thisSize; j++) {
+        let sumAbs = 0;
+        for (let i = 0; i < prevSize; i++) {
+          const w = (W[i]?.[j] ?? 0);
+          sumAbs += Math.abs(w);
+        }
+        const avgAbs = prevSize > 0 ? sumAbs / prevSize : 0;
+        layerMax = Math.max(layerMax, avgAbs);
+      }
+      maxes[L] = layerMax || 1;
+    }
+    return maxes;
+  })();
+
+
+  const getGlowForNeuron = (layerIdx: number, neuronIdx: number) => {
+    
+    const a = Math.abs(neuronValues.get(`${layerIdx}-${neuronIdx}`) ?? 0);
+
+    if (layerIdx === 0) {
+      return Math.max(0, Math.min(1, a));
+    }
+
+  
+    const prevSize = layerSizes[layerIdx - 1];
+    let sumAbs = 0;
+    for (let i = 0; i < prevSize; i++) {
+      const w = (weights[layerIdx - 1]?.[i]?.[neuronIdx] ?? 0);
+      sumAbs += Math.abs(w);
+    }
+    const avgAbs = prevSize > 0 ? sumAbs / prevSize : 0;
+
+  
+    const relW = avgAbs / (layerMaxAvgAbsIncoming[layerIdx] || 1);
+
+  
+    const importance = a * relW;
+
+  
+    return Math.max(0, Math.min(1, importance));
   };
 
   const getNeuronEquation = (layerIdx: number, neuronIdx: number) => {
-    if (!hasDataset || layerIdx === 0) return "";
+    if (!hasDataset || layerIdx === 0 || !isTrained) return "";
     const incomingWeights = weights[layerIdx - 1]?.map(row => row[neuronIdx] ?? 0) || [];
     const bias = biases[layerIdx - 1]?.[neuronIdx] ?? 0;
     const terms = incomingWeights.map((w, i) => {
@@ -106,8 +141,7 @@ const NetworkGraph: React.FC<Props> = ({
   };
 
   const getOutputEquations = () => {
-    if (!hasDataset) return [];
-    const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
+    if (!hasDataset || !isTrained) return [];
     const outputLayerIdx = layerSizes.length - 1;
     const equations: string[] = [];
     for (let neuronIdx = 0; neuronIdx < outputNeurons; neuronIdx++) {
@@ -121,17 +155,12 @@ const NetworkGraph: React.FC<Props> = ({
     return equations;
   };
 
-  const truncateEquation = (equation: string, maxLength: number = 200) => {
-    if (equation.length > maxLength) {
-      return equation.substring(0, maxLength - 3) + "...";
-    }
-    return equation;
-  };
+  const truncateEquation = (equation: string, maxLength: number = 200) =>
+    equation.length > maxLength ? equation.substring(0, maxLength - 3) + "..." : equation;
 
   const calculateTotalParameters = () => {
     let totalParams = 0;
-    const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
-    let paramBreakdown = [];
+    let paramBreakdown: string[] = [];
     for (let layerIdx = 0; layerIdx < layerSizes.length - 1; layerIdx++) {
       const fromSize = layerSizes[layerIdx];
       const toSize = layerSizes[layerIdx + 1];
@@ -145,34 +174,26 @@ const NetworkGraph: React.FC<Props> = ({
   };
 
   const positions = getNeuronPositions();
-  const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
   const totalParams = calculateTotalParameters();
   const outputEquations = getOutputEquations();
 
-  const outputLayerIdx = layerSizes.length - 1;
-  const outputEqs = Array(outputNeurons).fill(0).map((_, neuronIdx) => {
-    const key = `${outputLayerIdx}-${neuronIdx}`;
-    return neuronEquations.get(key) || getNeuronEquation(outputLayerIdx, neuronIdx);
-  });
+  const svgWidth = layerSizes.length * 150 + 100;
+  const svgHeight = Math.max(...layerSizes) * 100 + 400;
 
   const getBezierPoint = (t: number, start: { x: number; y: number }, control: { x: number; y: number }, end: { x: number; y: number }) => {
     const u = 1 - t;
     const tt = t * t;
     const uu = u * u;
     const ut2 = 2 * u * t;
-
     const x = uu * start.x + ut2 * control.x + tt * end.x;
     const y = uu * start.y + ut2 * control.y + tt * end.y;
-
     return { x, y };
   };
-
-  const svgWidth = layerSizes.length * 150 + 100;
-  const svgHeight = Math.max(...layerSizes) * 100 + 400;
 
   return (
     <svg width="100%" height="800" viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ backgroundColor: "#ffffff" }}>
       <defs>
+        
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
           <feMerge>
@@ -183,6 +204,7 @@ const NetworkGraph: React.FC<Props> = ({
       </defs>
 
       <g transform={`scale(${zoomLevel})`}>
+        {/* Edges */}
         {layerSizes.slice(0, -1).map((fromSize, layerIdx) => {
           const startIndex = layerIdx === 0 ? 0 : layerSizes.slice(0, layerIdx).reduce((a, b) => a + b, 0);
           return Array(fromSize).fill(0).map((_, fromIdx) =>
@@ -196,16 +218,22 @@ const NetworkGraph: React.FC<Props> = ({
               const midX = (from.x + to.x) / 2;
               const midY = (from.y + to.y) / 2;
 
-              const weight = weights[layerIdx]?.[fromIdx]?.[toIdx] ?? 0;
-              const isActive = pulses.some(p => p.layerIdx === layerIdx && p.fromIdx === fromIdx && p.toIdx === toIdx);
-              const strokeColor = isActive && pulses.some(p => p.direction === "backward") ? "#ff0000" : "#888888";
-              const strokeWidth = lineThicknessMode === "auto" ? 1 + Math.abs(weight) * 2 : 2;
+              const pulse = pulses.find(p =>
+                p.layerIdx === layerIdx &&
+                p.fromIdx === fromIdx &&
+                p.toIdx === toIdx
+              );
+              const connectionKey = `${layerIdx}-${fromIdx}-${toIdx}`;
+              const weight = displayedWeights.get(connectionKey);
+              const isActive = !!pulse;
+              const strokeColor = isActive && pulse?.direction === "backward" ? "#ff0000" : "#888888";
+              const strokeWidth = lineThicknessMode === "auto" && isTrained ? 1 + Math.abs(weight || 0) * 2 : 2;
 
               const staggerY = toIdx * 10;
               const offsetY = 10;
 
               return (
-                <g key={`${layerIdx}-${fromIdx}-${toIdx}`}>
+                <g key={connectionKey}>
                   <line
                     x1={from.x}
                     y1={from.y}
@@ -213,9 +241,9 @@ const NetworkGraph: React.FC<Props> = ({
                     y2={to.y}
                     stroke={strokeColor}
                     strokeWidth={strokeWidth}
-                    opacity="0.8"
+                    opacity={isActive ? 1 : 0.8}
                   />
-                  {showWeights && hasDataset && weight !== 0 && (
+                  {showWeights && hasDataset && isTrained && weight !== undefined && (
                     <text
                       x={midX}
                       y={midY + offsetY + staggerY}
@@ -234,22 +262,31 @@ const NetworkGraph: React.FC<Props> = ({
           );
         })}
 
+        {/* Neurons with activation×weight-based glow */}
         {positions.map((pos, i) => {
           let layerIdx = 0;
           let neuronIdx = i;
           for (let l = 0; l < layerSizes.length; l++) {
-            if (neuronIdx < layerSizes[l]) {
-              layerIdx = l;
-              break;
-            }
+            if (neuronIdx < layerSizes[l]) { layerIdx = l; break; }
             neuronIdx -= layerSizes[l];
           }
-          const strokeColor = layerIdx === 0 ? "#ADD8E6" : layerIdx <= hiddenLayers.length ? "#90EE90" : "#FFA07A";
-          const glowIntensity = getGlowIntensity(layerIdx, neuronIdx);
-          const glowFilter = glowIntensity > 0 ? `url(#glow) drop-shadow(0 0 ${glowIntensity}px ${strokeColor})` : "none";
+
+          const strokeColor =
+            layerIdx === 0 ? "#ADD8E6" :
+            layerIdx <= hiddenLayers.length ? "#90EE90" : "#FFA07A";
+
+          // NEW: activation × weight-based intensity
+          const importance = getGlowForNeuron(layerIdx, neuronIdx); // 0..1
+          const glowPx = 14 * importance;                           // radius
+          const glowAlpha = importance;                              // opacity 0..1
+          const glowColor = `rgba(255, 165, 0, ${glowAlpha})`;       // orange glow
+
+          const style = {
+            filter: importance > 0.01 ? `drop-shadow(0 0 ${glowPx}px ${glowColor})` : "none",
+          };
 
           const equationKey = `${layerIdx}-${neuronIdx}`;
-          const fullEquation = neuronEquations.get(equationKey) || getNeuronEquation(layerIdx, neuronIdx);
+          const fullEquation = isTrained ? (neuronEquations.get(equationKey) || getNeuronEquation(layerIdx, neuronIdx)) : "";
 
           const isOutputLayer = layerIdx === layerSizes.length - 1;
           const outputValue = isOutputLayer && outputs.length > 0 ? outputs[neuronIdx]?.toFixed(2) : null;
@@ -263,7 +300,7 @@ const NetworkGraph: React.FC<Props> = ({
                 fill="white"
                 stroke={strokeColor}
                 strokeWidth="2"
-                style={{ filter: glowFilter }}
+                style={style}
               />
               <title>{fullEquation !== "" ? fullEquation : ""}</title>
               <text
@@ -279,6 +316,7 @@ const NetworkGraph: React.FC<Props> = ({
                   ? `h${i - inputNeurons + 1}`
                   : `o${i - inputNeurons - hiddenLayers.reduce((a, b) => a + b, 0) + 1}`}
               </text>
+
               {layerIdx === 0 && currentInputs.length > neuronIdx && (
                 <text
                   x={pos.x}
@@ -291,6 +329,7 @@ const NetworkGraph: React.FC<Props> = ({
                   {currentInputs[neuronIdx].toFixed(2)}
                 </text>
               )}
+
               {neuronValues.size > 0 && !isOutputLayer && (
                 <text
                   x={pos.x}
@@ -303,6 +342,7 @@ const NetworkGraph: React.FC<Props> = ({
                   {neuronValues.get(`${layerIdx}-${neuronIdx}`)?.toFixed(2) || ""}
                 </text>
               )}
+
               {isOutputLayer && outputs.length > 0 && outputValue && (
                 <text
                   x={pos.x + 50}
@@ -319,22 +359,16 @@ const NetworkGraph: React.FC<Props> = ({
           );
         })}
 
+        {/* Pulses */}
         {pulses.map((pulse, i) => {
           const t = pulse.progress;
-          const to = pulse.to || positions.find(p => Math.hypot(p.x - pulse.from.x, p.y - pulse.from.y) < 50);
+          const positionsAll = getNeuronPositions();
+          const to = pulse.to || positionsAll.find(p => Math.hypot(p.x - pulse.from.x, p.y - pulse.from.y) < 50);
           if (!to) return null;
           const point = getBezierPoint(t, pulse.from, pulse.control, to);
           const fillColor = pulse.direction === "forward" ? "green" : "red";
           return (
-            <circle
-              key={i}
-              cx={point.x}
-              cy={point.y}
-              r="5"
-              fill={fillColor}
-              stroke="#000"
-              strokeWidth="1"
-            />
+            <circle key={i} cx={point.x} cy={point.y} r="5" fill={fillColor} stroke="#000" strokeWidth="1" />
           );
         })}
       </g>
@@ -349,7 +383,8 @@ const NetworkGraph: React.FC<Props> = ({
       >
         {`Epoch: ${epochDisplay} | Total Parameters: ${totalParams} | Activation: ${activationFunction} | Problem Type: ${problemType}`}
       </text>
-      {hasDataset && outputEquations.length > 0 && outputEquations.map((equation, index) => (
+
+      {hasDataset && outputEquations.length > 0 && isTrained && outputEquations.map((equation, index) => (
         <text
           key={index}
           x={50}

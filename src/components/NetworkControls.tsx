@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 
@@ -20,8 +21,12 @@ interface Props {
   setLineThicknessMode: (mode: "auto" | "fixed") => void;
   zoomLevel: number;
   setZoomLevel: (level: number) => void;
-  onTrain: (epochs: number) => void;
-  isTraining: boolean; // ✅ Added
+  onPlay: (epochs: number) => void;
+  onPause: () => void;
+  isTraining: boolean;
+  isPaused: boolean;
+  animationSpeed: number;
+  setAnimationSpeed: (speed: number) => void;
 }
 
 const NetworkControls: React.FC<Props> = ({
@@ -43,8 +48,12 @@ const NetworkControls: React.FC<Props> = ({
   setLineThicknessMode,
   zoomLevel,
   setZoomLevel,
-  onTrain,
-  isTraining, 
+  onPlay,
+  onPause,
+  isTraining,
+  isPaused,
+  animationSpeed,
+  setAnimationSpeed,
 }) => {
   const [testInputs, setTestInputs] = useState<number[]>(Array(inputNeurons).fill(0));
   const [epochs, setEpochs] = useState<number>(1);
@@ -313,13 +322,27 @@ const NetworkControls: React.FC<Props> = ({
         <span style={{ marginLeft: 10 }}>{(zoomLevel * 100).toFixed(0)}%</span>
       </div>
 
-      <button
-        onClick={() => onTrain(epochs)}
-        disabled={isTraining}
-        style={{ marginTop: "20px" }}
-      >
-        Train
-      </button>
+      <div style={{ marginTop: 10 }}>
+        <label>Animation Speed</label>
+        <input
+          type="range"
+          min="0.1"
+          max="5"
+          step="0.1"
+          value={animationSpeed}
+          onChange={(e) => setAnimationSpeed(parseFloat(e.target.value))}
+        />
+        <span>{animationSpeed.toFixed(1)}x</span>
+      </div>
+
+      <div style={{ marginTop: "20px" }}>
+        <button onClick={() => onPlay(epochs)} disabled={isTraining && !isPaused}>
+          Play
+        </button>
+        <button onClick={onPause} disabled={!isTraining || isPaused}>
+          Pause
+        </button>
+      </div>
     </div>
   );
 };
