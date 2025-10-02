@@ -1,3 +1,6 @@
+
+
+
 import React, { useEffect } from "react";
 
 interface Props {
@@ -10,7 +13,6 @@ interface Props {
   pulses: any[];
   neuronEquations: Map<string, string>;
   neuronValues: Map<string, number>;
-  neuronGradients: Map<string, number>;
   showWeights: boolean;
   lineThicknessMode: "auto" | "fixed";
   zoomLevel: number;
@@ -34,7 +36,6 @@ const NetworkGraph: React.FC<Props> = ({
   pulses,
   neuronEquations,
   neuronValues,
-  neuronGradients, 
   showWeights,
   lineThicknessMode,
   zoomLevel,
@@ -76,16 +77,13 @@ const NetworkGraph: React.FC<Props> = ({
     return index + neuronIdx;
   };
 
-  /**
-   * Compute per-layer normalization so glow scales well across different weight magnitudes.
-   * For each layer L>0, compute max over neurons of avg(|incoming weights|).
-   */
+
   const layerMaxAvgAbsIncoming: number[] = (() => {
-    const maxes: number[] = Array(layerSizes.length).fill(1); // default 1 to avoid divide-by-zero
+    const maxes: number[] = Array(layerSizes.length).fill(1); 
     for (let L = 1; L < layerSizes.length; L++) {
       const prevSize = layerSizes[L - 1];
       const thisSize = layerSizes[L];
-      const W = weights[L - 1] || []; // shape [prevSize][thisSize]
+      const W = weights[L - 1] || []; 
       let layerMax = 0;
       for (let j = 0; j < thisSize; j++) {
         let sumAbs = 0;
@@ -262,7 +260,6 @@ const NetworkGraph: React.FC<Props> = ({
           );
         })}
 
-        {/* Neurons with activation×weight-based glow */}
         {positions.map((pos, i) => {
           let layerIdx = 0;
           let neuronIdx = i;
@@ -275,7 +272,7 @@ const NetworkGraph: React.FC<Props> = ({
             layerIdx === 0 ? "#ADD8E6" :
             layerIdx <= hiddenLayers.length ? "#90EE90" : "#FFA07A";
 
-          // NEW: activation × weight-based intensity
+
           const importance = getGlowForNeuron(layerIdx, neuronIdx); // 0..1
           const glowPx = 14 * importance;                           // radius
           const glowAlpha = importance;                              // opacity 0..1
@@ -360,6 +357,7 @@ const NetworkGraph: React.FC<Props> = ({
         })}
 
         {/* Pulses */}
+        
         {pulses.map((pulse, i) => {
           const t = pulse.progress;
           const positionsAll = getNeuronPositions();

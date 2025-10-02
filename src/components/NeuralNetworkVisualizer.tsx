@@ -1,4 +1,5 @@
-// NeuralNetworkVisualizer.tsx (updated for dynamic pause and speed)
+
+
 import React, { useState, useEffect, useRef } from "react";
 import * as tf from "@tensorflow/tfjs";
 import NetworkControls from "./NetworkControls";
@@ -95,14 +96,12 @@ const NeuralNetworkVisualizer = React.memo(() => {
   const [isTrained, setIsTrained] = useState(false);
   const [neuronEquations, setNeuronEquations] = useState<Map<string, string>>(new Map());
   const [neuronValues, setNeuronValues] = useState<Map<string, number>>(new Map());
-  const [neuronGradients, setNeuronGradients] = useState<Map<string, number>>(new Map());
   const [epochDisplay, setEpochDisplay] = useState(0);
-  const [showBackpropBanner, setShowBackpropBanner] = useState(false);
   const [showWeights, setShowWeights] = useState(true);
   const [lineThicknessMode, setLineThicknessMode] = useState<"auto" | "fixed">("auto");
   const [zoomLevel, setZoomLevel] = useState(1);
   const [model, setModel] = useState<tf.Sequential | null>(null);
-  const [dataset, setDataset] = useState({ inputs: [], outputs: [] });
+  const [dataset, setDataset] = useState<{ inputs: number[][]; outputs: number[][] }>({ inputs: [], outputs: [] });
   const [debugWeights, setDebugWeights] = useState<string>("");
   const [trainingPhase, setTrainingPhase] = useState<string>("");
   const [displayedWeights, setDisplayedWeights] = useState<Map<string, number>>(new Map());
@@ -146,7 +145,6 @@ const NeuralNetworkVisualizer = React.memo(() => {
       setLossHistory([]);
       setNeuronEquations(new Map());
       setNeuronValues(new Map());
-      setNeuronGradients(new Map());
       setOutputs([]);
       setCurrentInputs([]);
       setPulses([]);
@@ -308,9 +306,9 @@ const NeuralNetworkVisualizer = React.memo(() => {
     trainingStateRef.current = { loss: null, lossHistory: [], outputs: [] };
 
     const model = tf.sequential();
-    model.add(tf.layers.dense({ inputShape: [inputNeurons], units: hiddenLayers[0], activation: activationFunction }));
+    model.add(tf.layers.dense({ inputShape: [inputNeurons], units: hiddenLayers[0], activation: activationFunction as any }));
     hiddenLayers.slice(1).forEach((units) =>
-      model.add(tf.layers.dense({ units, activation: activationFunction }))
+      model.add(tf.layers.dense({ units, activation: activationFunction as any }))
     );
     const outputActivation = problemType === "Classification" && outputNeurons > 1 ? "softmax" : "sigmoid";
     model.add(tf.layers.dense({ units: outputNeurons, activation: outputActivation }));
@@ -365,8 +363,8 @@ const NeuralNetworkVisualizer = React.memo(() => {
       const singleInput = trainXs.slice([randomIndex, 0], [1, inputNeurons]);
       const singleOutput = trainYs.slice([randomIndex, 0], [1, outputNeurons]);
 
-      const preTrainWeights = await Promise.all(model.getWeights().filter((_, i) => i % 2 === 0).map(w => w.array()));
-      const preTrainBiases = await Promise.all(model.getWeights().filter((_, i) => i % 2 !== 0).map(b => b.array()));
+      const preTrainWeights = await Promise.all(model.getWeights().filter((_, i) => i % 2 === 0).map(w => w.array())) as number[][][];
+      const preTrainBiases = await Promise.all(model.getWeights().filter((_, i) => i % 2 !== 0).map(b => b.array())) as number[][][];
 
       const { neuronValuesMap } = await computeActivations(model, await singleInput.array());
       await playForward({ model, neuronValuesMap, parsedWeights: preTrainWeights, parsedBiases: preTrainBiases });
@@ -386,8 +384,8 @@ const NeuralNetworkVisualizer = React.memo(() => {
       setLossHistory([...newLossHistory]);
       setLoss(epochLoss.toFixed(4));
 
-      const postTrainWeights = await Promise.all(model.getWeights().filter((_, i) => i % 2 === 0).map(w => w.array()));
-      const postTrainBiases = await Promise.all(model.getWeights().filter((_, i) => i % 2 !== 0).map(b => b.array()));
+      const postTrainWeights = await Promise.all(model.getWeights().filter((_, i) => i % 2 === 0).map(w => w.array())) as number[][][];
+      const postTrainBiases = await Promise.all(model.getWeights().filter((_, i) => i % 2 !== 0).map(b => b.array())) as number[][][];
 
       setDebugWeights(`Epoch ${epoch} Weights: ` + JSON.stringify(postTrainWeights));
       setTrainingPhase(`Epoch ${epoch}: Backward Pass`);
@@ -401,7 +399,6 @@ const NeuralNetworkVisualizer = React.memo(() => {
 
     setTrainingPhase("");
     setDebugWeights("");
-    setShowBackpropBanner(false);
     trainingInitiated.current = false;
     setIsTraining(false);
     setIsPaused(false);
@@ -505,12 +502,12 @@ const NeuralNetworkVisualizer = React.memo(() => {
         if (progress >= 1) {
           for (const step of layer.steps) {
             currentWeights[layer.from][step.fromIdx][step.toIdx] = step.weight;
-            currentBiases[layer.to - 1][step.toIdx] = step.bias;
+            currentBiases[layer.to - 1][step.toIdx] = (step.bias as unknown as number);
             newDisplayedWeights.set(`${layer.from}-${step.fromIdx}-${step.toIdx}`, step.weight);
 
             const key = `${layer.to}-${step.toIdx}`;
             const weightsToNeuron = currentWeights[layer.from].map((row) => row[step.toIdx] ?? 0);
-            const bias = step.bias ?? 0;
+            const bias = (step.bias as unknown as number) ?? 0;
             const terms = weightsToNeuron.map((w, i) => {
               const inputLabel = layer.from === 0 ? `x${i + 1}` : `h${i + 1}`;
               return `${w.toFixed(2)}·${inputLabel}`;
@@ -628,7 +625,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
         if (progress >= 1) {
           for (const step of layer.steps) {
             currentWeights[layer.from][step.fromIdx][step.toIdx] = step.weight;
-            currentBiases[layer.to - 1][step.toIdx] = step.bias;
+            currentBiases[layer.to - 1][step.toIdx] = (step.bias as unknown as number);
             newDisplayedWeights.set(`${layer.from}-${step.fromIdx}-${step.toIdx}`, step.weight);
 
             const gradientKey = `${layer.from}-${step.fromIdx}`;
@@ -638,7 +635,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
 
             const equationKey = `${layer.to}-${step.toIdx}`;
             const weightsToNeuron = currentWeights[layer.from].map((row) => row[step.toIdx] ?? 0);
-            const bias = step.bias ?? 0;
+            const bias = (step.bias as unknown as number) ?? 0;
             const terms = weightsToNeuron.map((w, i) => {
               const inputLabel = layer.from === 0 ? `x${i + 1}` : `h${i + 1}`;
               return `${w.toFixed(2)}·${inputLabel}`;
@@ -651,7 +648,6 @@ const NeuralNetworkVisualizer = React.memo(() => {
           setDisplayedWeights(new Map(newDisplayedWeights));
           setNeuronEquations(new Map(equationMap));
           setNeuronValues(new Map(valueMap));
-          setNeuronGradients(new Map(gradientMap));
         }
       }
 
@@ -681,25 +677,25 @@ const NeuralNetworkVisualizer = React.memo(() => {
     setCurrentInputs(inputs.map(val => parseFloat(val.toFixed(3))));
     const xs = tf.tensor2d([inputs]);
     const pred = model.predict(xs) as tf.Tensor;
-    const predArray = await pred.array();
-    setOutputs(predArray.flatMap((v: any) => v.map((val: number) => parseFloat(val.toFixed(3)))));
+    const predArray = await pred.array() as number[][];
+    setOutputs(predArray.flatMap((v: number[]) => v.map((val: number) => parseFloat(val.toFixed(3)))));
     xs.dispose();
 
     const modelWeights = model.getWeights();
     const parsedWeights = await Promise.all(
       modelWeights.filter((_, i) => i % 2 === 0).map((w) => w.array())
-    );
+    ) as number[][][];
     const parsedBiases = await Promise.all(
       modelWeights.filter((_, i) => i % 2 !== 0).map((b) => b.array())
-    );
+    ) as number[][][];
 
     setDebugWeights("Prediction Weights: " + JSON.stringify(parsedWeights));
     setTrainingPhase("Prediction");
 
     const newDisplayedWeights = new Map<string, number>();
-    parsedWeights.forEach((layerWeights, layerIdx) => {
-      layerWeights.forEach((neuronWeights, fromIdx) => {
-        neuronWeights.forEach((weight, toIdx) => {
+    parsedWeights.forEach((layerWeights: number[][], layerIdx: number) => {
+      layerWeights.forEach((neuronWeights: number[], fromIdx: number) => {
+        neuronWeights.forEach((weight: number, toIdx: number) => {
           newDisplayedWeights.set(`${layerIdx}-${fromIdx}-${toIdx}`, weight);
         });
       });
@@ -708,7 +704,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
     cancelAnimationRef.current = false;
     setDisplayedWeights(newDisplayedWeights);
     const { neuronValuesMap } = await computeActivations(model, [inputs]);
-    await playForward({ model, neuronValuesMap, parsedWeights, parsedBiases });
+    await playForward({ model, neuronValuesMap, parsedWeights: parsedWeights as number[][][], parsedBiases: parsedBiases as number[][][] });
     setTrainingPhase("");
   };
 
@@ -751,7 +747,6 @@ const NeuralNetworkVisualizer = React.memo(() => {
       pauseResolveRef.current = null;
     }
     setPulses([]);
-    setShowBackpropBanner(false);
     setDisplayedConnections(new Set());
     setDisplayedWeights(new Map());
     setCurrentInputs([]);
@@ -834,7 +829,6 @@ const NeuralNetworkVisualizer = React.memo(() => {
               displayedConnections={displayedConnections}
               neuronEquations={neuronEquations}
               neuronValues={neuronValues}
-              neuronGradients={neuronGradients}
               showWeights={showWeights}
               lineThicknessMode={lineThicknessMode}
               zoomLevel={zoomLevel}

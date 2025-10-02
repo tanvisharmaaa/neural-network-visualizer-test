@@ -1,11 +1,109 @@
+/* index.css */
+
 body {
   margin: 0;
   padding: 0;
-  background-color: #0f0f1a;
-  color: #ffffff;
-  font-family: Arial, sans-serif;
+  background-color: #f6f8fa; /* Soft page background */
+  color: #222222; /* Slightly dark text for contrast */
+  font-family: 'Arial', sans-serif;
 }
 
 * {
   box-sizing: border-box;
 }
+
+/* Panels */
+.panel {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Input elements */
+input,
+select,
+button {
+  background-color: #dceefb;
+  color: #222;
+  border: 1px solid #a3c4f3;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+button {
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #b6e0fe;
+}
+
+/* Titles */
+h1, h2, h3, label {
+  color: #222;
+}
+
+/* Graph panel */
+.graph-panel {
+  background-color: #e8f0fe;
+  border-radius: 12px;
+  padding: 20px;
+  overflow-x: auto;
+  min-height: 500px;
+}
+
+/* Utility margins */
+.mt-1 { margin-top: 10px; }
+.mt-2 { margin-top: 20px; }
+.mb-1 { margin-bottom: 10px; }
+.mb-2 { margin-bottom: 20px; }
+
+/* Form layout */
+form > div {
+  margin-bottom: 15px;
+}
+
+/* Responsive layout */
+@media (max-width: 768px) {
+  .panels {
+    flex-direction: column;
+  }
+
+  .panel,
+  .graph-panel {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+/* Typography */
+h1 {
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+/* Output box */
+.output-box {
+  background-color: #ffffff;
+  padding: 15px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  color: #333;
+  font-size: 14px;
+  margin-top: 20px;
+}
+
+/* Layer box specific */
+.layer-box {
+  background-color: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+/* Neuron circles and pulses handled in NetworkGraph */

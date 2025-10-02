@@ -1,4 +1,3 @@
-import React from 'react'
 import NeuralNetworkVisualizer from './components/NeuralNetworkVisualizer'
 
 function App() {

@@ -99,7 +99,7 @@ const NetworkControls: React.FC<Props> = ({
     reader.onload = (event) => {
       try {
         if (fileExtension === 'json') {
-          const data = JSON.parse(event.target.result as string);
+          const data = JSON.parse((event.target as FileReader).result as string);
           if (data.inputs && data.outputs && Array.isArray(data.inputs) && Array.isArray(data.outputs)) {
             setInputNeurons(data.inputs[0].length);
             setOutputNeurons(data.outputs[0].length);
@@ -108,7 +108,7 @@ const NetworkControls: React.FC<Props> = ({
             alert("Invalid JSON dataset format.");
           }
         } else if (fileExtension === 'csv') {
-          Papa.parse(event.target.result as string, {
+          Papa.parse((event.target as FileReader).result as string, {
             complete: (result) => {
               const data = result.data as any[];
               if (data.length < 1) {
