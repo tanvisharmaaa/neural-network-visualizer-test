@@ -14,14 +14,14 @@ An interactive web application for visualizing neural network training with real
 
 ## Live Demo
 
-The application is deployed on GitHub Pages: [https://yourusername.github.io/neural-visualizer/](https://yourusername.github.io/neural-visualizer/)
+The application is deployed on GitHub Pages: [https://tanvisharmaaa.github.io/neural-network-visualizer-test/](https://tanvisharmaaa.github.io/neural-network-visualizer-test/)
 
 ## Local Development
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/neural-visualizer.git
-cd neural-visualizer
+git clone https://github.com/tanvisharmaaa/neural-network-visualizer-test.git
+cd neural-network-visualizer-test
 ```
 
 2. Install dependencies:
