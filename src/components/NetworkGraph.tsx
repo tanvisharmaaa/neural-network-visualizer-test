@@ -1,6 +1,4 @@
-
-
-
+// NetworkGraph.tsx
 import React, { useEffect } from "react";
 
 interface Props {
@@ -48,9 +46,7 @@ const NetworkGraph: React.FC<Props> = ({
   displayedWeights,
 }) => {
   useEffect(() => {
-    console.log("NetworkGraph rerendered with weights:", weights.map(w => (w ? w.map(row => row.map(val => val?.toFixed(2) || "0")) : [])));
-    console.log("Displayed Weights:", Array.from(displayedWeights.entries()));
-    console.log("Neuron Values:", Array.from(neuronValues.entries()));
+    // Removed console.logs to reduce spam; can be added back for debugging if needed
   }, [weights, displayedWeights, neuronValues]);
 
   const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
@@ -77,7 +73,6 @@ const NetworkGraph: React.FC<Props> = ({
     return index + neuronIdx;
   };
 
-
   const layerMaxAvgAbsIncoming: number[] = (() => {
     const maxes: number[] = Array(layerSizes.length).fill(1); 
     for (let L = 1; L < layerSizes.length; L++) {
@@ -99,16 +94,14 @@ const NetworkGraph: React.FC<Props> = ({
     return maxes;
   })();
 
-
   const getGlowForNeuron = (layerIdx: number, neuronIdx: number) => {
-    
     const a = Math.abs(neuronValues.get(`${layerIdx}-${neuronIdx}`) ?? 0);
 
     if (layerIdx === 0) {
-      return Math.max(0, Math.min(1, a));
+      // For z-score normalized inputs, use a scaled version
+      return Math.max(0, Math.min(1, Math.abs(a) * 0.5)); // Adjust factor for visibility
     }
 
-  
     const prevSize = layerSizes[layerIdx - 1];
     let sumAbs = 0;
     for (let i = 0; i < prevSize; i++) {
@@ -117,14 +110,11 @@ const NetworkGraph: React.FC<Props> = ({
     }
     const avgAbs = prevSize > 0 ? sumAbs / prevSize : 0;
 
-  
     const relW = avgAbs / (layerMaxAvgAbsIncoming[layerIdx] || 1);
 
-  
     const importance = a * relW;
 
-  
-    return Math.max(0, Math.min(1, importance));
+    return Math.max(0, Math.min(1, importance * 3)); // Amplify for better visibility
   };
 
   const getNeuronEquation = (layerIdx: number, neuronIdx: number) => {
@@ -142,13 +132,17 @@ const NetworkGraph: React.FC<Props> = ({
     if (!hasDataset || !isTrained) return [];
     const outputLayerIdx = layerSizes.length - 1;
     const equations: string[] = [];
+    const incomingWeightsAll = weights[outputLayerIdx - 1]?.map(row => row) || [];
+    const biasesOutput = biases[outputLayerIdx - 1] ?? [];
+    const activation = problemType === "Regression" ? "" : (problemType === "Classification" && outputNeurons > 1 ? "softmax" : "sigmoid");
+
     for (let neuronIdx = 0; neuronIdx < outputNeurons; neuronIdx++) {
-      const incomingWeights = weights[outputLayerIdx - 1]?.map(row => row[neuronIdx] ?? 0) || [];
-      const bias = biases[outputLayerIdx - 1]?.[neuronIdx] ?? 0;
+      const incomingWeights = incomingWeightsAll.map(row => row[neuronIdx] ?? 0);
+      const bias = biasesOutput[neuronIdx] ?? 0;
       const inputLabels = incomingWeights.map((_, i) => `h${i + 1}`);
       const terms = incomingWeights.map((w, i) => `${w.toFixed(2)}·${inputLabels[i]}`).join(" + ");
-      const activation = problemType === "Classification" && outputNeurons > 1 ? "softmax" : "sigmoid";
-      equations.push(`o${neuronIdx + 1} = ${activation}(${terms} + ${bias.toFixed(2)})`);
+      const zExpr = `${terms} + ${bias.toFixed(2)}`;
+      equations.push(`o${neuronIdx + 1} = ${activation ? `${activation}(${zExpr})` : zExpr}`);
     }
     return equations;
   };
@@ -167,7 +161,7 @@ const NetworkGraph: React.FC<Props> = ({
       totalParams += weightsCount + biasesCount;
       paramBreakdown.push(`Layer ${layerIdx}→${layerIdx + 1}: ${weightsCount} weights + ${biasesCount} biases`);
     }
-    console.log(`Parameter breakdown: ${paramBreakdown.join(", ")} | Total: ${totalParams}`);
+    // Removed console.log for parameter breakdown; can log if needed
     return totalParams;
   };
 
@@ -191,7 +185,6 @@ const NetworkGraph: React.FC<Props> = ({
   return (
     <svg width="100%" height="800" viewBox={`0 0 ${svgWidth} ${svgHeight}`} style={{ backgroundColor: "#ffffff" }}>
       <defs>
-        
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
           <feMerge>
@@ -272,7 +265,6 @@ const NetworkGraph: React.FC<Props> = ({
             layerIdx === 0 ? "#ADD8E6" :
             layerIdx <= hiddenLayers.length ? "#90EE90" : "#FFA07A";
 
-
           const importance = getGlowForNeuron(layerIdx, neuronIdx); // 0..1
           const glowPx = 14 * importance;                           // radius
           const glowAlpha = importance;                              // opacity 0..1
@@ -299,7 +291,7 @@ const NetworkGraph: React.FC<Props> = ({
                 strokeWidth="2"
                 style={style}
               />
-              <title>{fullEquation !== "" ? fullEquation : ""}</title>
+              <title>{fullEquation !== "" ? fullEquation : ""}</title> {/* Full equation in tooltip */}
               <text
                 x={pos.x}
                 y={pos.y}
@@ -383,17 +375,19 @@ const NetworkGraph: React.FC<Props> = ({
       </text>
 
       {hasDataset && outputEquations.length > 0 && isTrained && outputEquations.map((equation, index) => (
-        <text
-          key={index}
-          x={50}
-          y={svgHeight - 60 + index * 20}
-          textAnchor="start"
-          dominantBaseline="middle"
-          fontSize="14"
-          fill="#333"
-        >
-          {truncateEquation(equation)}
-        </text>
+        <g key={index}>
+          <text
+            x={50}
+            y={svgHeight - 60 + index * 20}
+            textAnchor="start"
+            dominantBaseline="middle"
+            fontSize="14"
+            fill="#333"
+          >
+            {truncateEquation(equation)}
+          </text>
+          <title>{equation}</title> {/* Full equation in tooltip for truncated ones */}
+        </g>
       ))}
     </svg>
   );

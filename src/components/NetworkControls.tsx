@@ -1,4 +1,4 @@
-
+// NetworkControls.tsx
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 
@@ -16,7 +16,7 @@ interface Props {
   showWeights: boolean;
   setShowWeights: (val: boolean) => void;
   onPredict: (inputs: number[]) => void;
-  onDatasetUpload: (data: { inputs: number[][]; outputs: number[][] }) => void;
+  onDatasetUpload: (data: { inputs: number[][]; outputs: number[][]; needsOutputNormalization?: boolean }) => void;
   lineThicknessMode: "auto" | "fixed";
   setLineThicknessMode: (mode: "auto" | "fixed") => void;
   zoomLevel: number;
@@ -27,6 +27,9 @@ interface Props {
   isPaused: boolean;
   animationSpeed: number;
   setAnimationSpeed: (speed: number) => void;
+  learningRate: number;
+  setLearningRate: (rate: number) => void;
+  hasDataset: boolean;
 }
 
 const NetworkControls: React.FC<Props> = ({
@@ -54,12 +57,29 @@ const NetworkControls: React.FC<Props> = ({
   isPaused,
   animationSpeed,
   setAnimationSpeed,
+  learningRate,
+  setLearningRate,
+  hasDataset,
 }) => {
   const [testInputs, setTestInputs] = useState<number[]>(Array(inputNeurons).fill(0));
   const [epochs, setEpochs] = useState<number>(1);
+  const [labelColumn, setLabelColumn] = useState<string>("");
+  const [outputColumns, setOutputColumns] = useState<string[]>([]);
+  const [inputColumns, setInputColumns] = useState<string[]>([]);
+  const [availableColumns, setAvailableColumns] = useState<string[]>([]);
+  const [fileContent, setFileContent] = useState<string | null>(null);
 
+  // Sync test inputs when inputNeurons changes, preserving valid values
   useEffect(() => {
-    setTestInputs(Array(inputNeurons).fill(0));
+    setTestInputs((prev) => {
+      const newInputs = Array(inputNeurons).fill(0);
+      for (let i = 0; i < Math.min(prev.length, inputNeurons); i++) {
+        if (!isNaN(prev[i])) {
+          newInputs[i] = prev[i];
+        }
+      }
+      return newInputs;
+    });
   }, [inputNeurons]);
 
   const handleEpochChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,11 +102,220 @@ const NetworkControls: React.FC<Props> = ({
       alert(`Please provide exactly ${inputNeurons} input values.`);
       return;
     }
-    if (testInputs.some(isNaN)) {
+    if (testInputs.some((val) => isNaN(val))) {
       alert("All test inputs must be valid numbers.");
       return;
     }
     onPredict(testInputs);
+  };
+
+  // Classify columns as numeric or categorical and compute means for imputation
+  const classifyColumns = (rows: any[], columns: string[]) => {
+    const columnTypes = new Map<string, 'numeric' | 'categorical'>();
+    const columnMeans = new Map<string, number>();
+    const columnUniques = new Map<string, Set<string>>();
+
+    columns.forEach((col) => {
+      const values = rows.map((row) => row[col]?.toString().trim() || '');
+      const nonMissingValues = values.filter((val) => val && val.toUpperCase() !== 'NA');
+      const isNumeric = nonMissingValues.length > 0 && nonMissingValues.every((val) => !isNaN(parseFloat(val)));
+
+      columnTypes.set(col, isNumeric ? 'numeric' : 'categorical');
+
+      if (isNumeric) {
+        const numValues = nonMissingValues.map((val) => parseFloat(val));
+        const mean = numValues.length > 0 ? numValues.reduce((a, b) => a + b, 0) / numValues.length : 0;
+        columnMeans.set(col, mean);
+      } else {
+        const uniques = new Set(nonMissingValues.map((val) => val.toLowerCase()));
+        columnUniques.set(col, uniques);
+        if (uniques.size > 10) {
+          console.warn(`Column ${col} has too many unique values (${uniques.size}). Consider preprocessing.`);
+        }
+      }
+    });
+
+    return { columnTypes, columnMeans, columnUniques };
+  };
+
+  // Validate and process row with imputation and encoding
+  const processRow = (row: any, inputCols: string[], outputCols: string[], problemType: string, columnTypes: Map<string, 'numeric' | 'categorical'>, columnMeans: Map<string, number>, columnUniques: Map<string, Set<string>>, labelToIndex: Map<string, number>) => {
+    const inputValues: number[] = [];
+    for (const col of inputCols) {
+      let val = row[col]?.toString().trim() || '';
+      if (val.toUpperCase() === 'NA' || val === '') {
+        if (columnTypes.get(col) === 'numeric') {
+          val = columnMeans.get(col)!.toString(); // Impute mean
+        } else {
+          val = 'missing'; // Impute 'missing' for categorical
+        }
+      }
+      if (columnTypes.get(col) === 'numeric') {
+        const numVal = parseFloat(val);
+        if (isNaN(numVal)) return null;
+        inputValues.push(numVal);
+      } else {
+        const uniques = Array.from(columnUniques.get(col)!);
+        const oneHot = uniques.map((u) => (val.toLowerCase() === u ? 1 : 0));
+        inputValues.push(...oneHot);
+      }
+    }
+
+    const outputValues: number[] = [];
+    for (const col of outputCols) {
+      let val = row[col]?.toString().trim() || '';
+      if (val.toUpperCase() === 'NA' || val === '') {
+        if (problemType === "Regression") {
+          val = columnMeans.get(col)!.toString(); // Impute mean for regression outputs
+        } else {
+          return null; // Skip for classification
+        }
+      }
+      if (problemType === "Regression") {
+        const numVal = parseFloat(val);
+        if (isNaN(numVal)) return null;
+        outputValues.push(numVal);
+      } else {
+        const label = val.toLowerCase();
+        if (!label || label.toUpperCase() === 'NA') return null;
+        const index = labelToIndex.get(label);
+        if (index === undefined) return null;
+        outputValues.push(index);
+      }
+    }
+
+    if (inputValues.every((val) => !isNaN(val)) && outputValues.every((val) => !isNaN(val))) {
+      return { input: inputValues, output: outputValues };
+    }
+    return null;
+  };
+
+  const processCSV = () => {
+    if (!fileContent) {
+      alert("No file content available to process.");
+      return;
+    }
+
+    Papa.parse(fileContent, {
+      complete: (result) => {
+        const data = result.data as any[];
+        if (data.length < 1) {
+          alert("CSV file is empty or invalid.");
+          return;
+        }
+
+        const headers = Object.keys(data[0] || {}).filter((h) => h && h !== '');
+        if (headers.length < 2) {
+          alert("Invalid headers: CSV must have at least 2 unique, non-empty column names.");
+          return;
+        }
+
+        const uniqueHeaders = [...new Set(headers)];
+        if (uniqueHeaders.length !== headers.length) {
+          alert("Invalid headers: CSV contains duplicate column names.");
+          return;
+        }
+
+        const rows = data.filter((row) => row && Object.keys(row).length === headers.length);
+        if (rows.length === 0) {
+          alert("CSV file contains no valid rows matching header count.");
+          return;
+        }
+
+        let inputCols: string[] = inputColumns;
+        let outputCols: string[] = [];
+        let assumedOutputNeurons = outputNeurons;
+
+        if (problemType === "Classification") {
+          if (!labelColumn || !headers.includes(labelColumn)) {
+            alert("Please select a valid label column for classification.");
+            return;
+          }
+          outputCols = [labelColumn];
+          const uniqueValues = [...new Set(
+            rows.map((row) => row[labelColumn]?.toString().trim().toLowerCase() || "")
+              .filter((val) => val && val.toUpperCase() !== 'NA')
+          )];
+          console.log("Unique labels:", uniqueValues); // Debug log
+          if (uniqueValues.length === 0) {
+            alert("No valid labels found in the selected label column.");
+            return;
+          }
+          if (uniqueValues.length > 10) {
+            alert(`The selected label column has too many unique values (${uniqueValues.length}), which may indicate it's not a categorical label. Please select a different column.`);
+            return;
+          }
+          const isBinary = uniqueValues.length <= 2;
+          assumedOutputNeurons = isBinary ? 1 : uniqueValues.length;
+          if (assumedOutputNeurons !== outputNeurons) {
+            alert(`Classification requires ${assumedOutputNeurons} output neurons for ${uniqueValues.length} unique labels. Adjusting automatically.`);
+            setOutputNeurons(assumedOutputNeurons);
+          }
+        } else {
+          if (outputColumns.length === 0) {
+            alert("Please select at least one output column for regression.");
+            return;
+          }
+          outputCols = outputColumns;
+          assumedOutputNeurons = outputColumns.length;
+          if (assumedOutputNeurons !== outputNeurons) {
+            alert(`Regression requires ${assumedOutputNeurons} output neurons for selected columns. Adjusting automatically.`);
+            setOutputNeurons(assumedOutputNeurons);
+          }
+        }
+
+        if (inputCols.length === 0) {
+          alert("Please select at least one input column.");
+          return;
+        }
+
+        // Classify all columns
+        const classificationResult = classifyColumns(rows, [...inputCols, ...outputCols]);
+        if (!classificationResult) return;
+        const { columnTypes, columnMeans, columnUniques } = classificationResult;
+
+        const inputs: number[][] = [];
+        let rawOutputs: number[][] = [];
+        const labelToIndex = new Map<string, number>();
+        if (problemType === "Classification") {
+          const uniqueValues = [...new Set(
+            rows.map((row) => row[labelColumn]?.toString().trim().toLowerCase() || "")
+              .filter((val) => val && val.toUpperCase() !== 'NA')
+          )];
+          uniqueValues.sort(); // Sort for consistent mapping
+          uniqueValues.forEach((val, idx) => labelToIndex.set(val, idx));
+        }
+
+        rows.forEach((row) => {
+          const processed = processRow(row, inputCols, outputCols, problemType, columnTypes, columnMeans, columnUniques, labelToIndex);
+          if (processed) {
+            inputs.push(processed.input);
+            rawOutputs.push(processed.output);
+          }
+        });
+
+        let outputs: number[][] = rawOutputs;
+        if (problemType === "Classification" && assumedOutputNeurons > 1) {
+          outputs = rawOutputs.map((row) => {
+            const labelIndex = row[0];
+            const oneHot = Array(assumedOutputNeurons).fill(0);
+            oneHot[labelIndex] = 1;
+            return oneHot;
+          });
+        }
+
+        if (inputs.length > 0 && outputs.length > 0) {
+          console.log(`Input neurons: ${inputs[0].length} from columns: ${inputCols.join(', ')}`);
+          setInputNeurons(inputs[0].length);
+          onDatasetUpload({ inputs, outputs, needsOutputNormalization: problemType === "Regression" });
+        } else {
+          alert("Parsed dataset has no valid rows after filtering invalid or missing data. Check if selected columns have valid data.");
+        }
+      },
+      header: true,
+      skipEmptyLines: 'greedy',
+      dynamicTyping: false,
+    });
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -99,16 +328,23 @@ const NetworkControls: React.FC<Props> = ({
     reader.onload = (event) => {
       try {
         if (fileExtension === 'json') {
-          const data = JSON.parse((event.target as FileReader).result as string);
-          if (data.inputs && data.outputs && Array.isArray(data.inputs) && Array.isArray(data.outputs)) {
-            setInputNeurons(data.inputs[0].length);
-            setOutputNeurons(data.outputs[0].length);
-            onDatasetUpload(data);
-          } else {
-            alert("Invalid JSON dataset format.");
+          const data = JSON.parse(event.target?.result as string);
+          if (!validateJSONDataset(data)) {
+            alert("Invalid JSON dataset: Must contain 'inputs' and 'outputs' arrays with consistent numeric values.");
+            return;
           }
+          setInputNeurons(data.inputs[0].length);
+          setOutputNeurons(data.outputs[0].length);
+          setAvailableColumns([]);
+          setLabelColumn("");
+          setOutputColumns([]);
+          setInputColumns([]);
+          setFileContent(null);
+          onDatasetUpload({ ...data, needsOutputNormalization: problemType === "Regression" });
         } else if (fileExtension === 'csv') {
-          Papa.parse((event.target as FileReader).result as string, {
+          const content = event.target?.result as string;
+          setFileContent(content);
+          Papa.parse(content, {
             complete: (result) => {
               const data = result.data as any[];
               if (data.length < 1) {
@@ -116,98 +352,68 @@ const NetworkControls: React.FC<Props> = ({
                 return;
               }
 
-              const headers = Object.keys(data[0] || {});
+              const headers = Object.keys(data[0] || {}).filter((h) => h && h !== '');
               if (headers.length < 2) {
-                alert("CSV must have at least 2 columns (1 input and 1 output).");
+                alert("Invalid headers: CSV must have at least 2 unique, non-empty column names.");
                 return;
               }
 
-              const rows = data.filter(row => row && Object.keys(row).length === headers.length);
-              if (rows.length === 0) {
-                alert("CSV file contains no valid rows.");
+              const uniqueHeaders = [...new Set(headers)];
+              if (uniqueHeaders.length !== headers.length) {
+                alert("Invalid headers: CSV contains duplicate column names.");
                 return;
               }
 
-              const inputs: number[][] = [];
-              let outputs: number[][] = [];
-
-              let assumedOutputNeurons = 1;
-              let isBinary = false;
-              const lastColValues = rows.map(row => row[headers[headers.length - 1]]?.toString().toLowerCase());
-              const uniqueValues = [...new Set(lastColValues)];
-
-              if (problemType === "Classification" && uniqueValues.length > 0) {
-                isBinary = uniqueValues.length <= 2 && uniqueValues.every(val =>
-                  ['0', '1', 'm', 'b', 'true', 'false'].includes(val) || !isNaN(parseFloat(val))
-                );
-                assumedOutputNeurons = isBinary ? 1 : uniqueValues.length;
-              } else if (problemType === "Regression") {
-                assumedOutputNeurons = 1;
-              }
-
-              const inputCols = headers.slice(0, headers.length - assumedOutputNeurons);
-              const outputCols = headers.slice(headers.length - assumedOutputNeurons);
-
-              const rawOutputs: number[][] = [];
-              rows.forEach(row => {
-                const input = inputCols.map(col => parseFloat(row[col]) || 0);
-                const output = outputCols.map(col => {
-                  const val = row[col]?.toString().toLowerCase();
-                  if (problemType === "Classification") {
-                    if (assumedOutputNeurons === 1) {
-                      return val === 'm' || val === '1' || val === 'true' ? 1 : 0;
-                    } else {
-                      return uniqueValues.indexOf(val);
-                    }
-                  }
-                  const numVal = parseFloat(val);
-                  return isNaN(numVal) ? 0 : numVal;
-                });
-                if (input.every(val => !isNaN(val)) && output.every(val => !isNaN(val))) {
-                  inputs.push(input);
-                  rawOutputs.push(output);
-                }
-              });
-
-              if (problemType === "Classification" && assumedOutputNeurons > 1) {
-                outputs = rawOutputs.map(row => {
-                  const labelIndex = row[0];
-                  const oneHot = Array(assumedOutputNeurons).fill(0);
-                  oneHot[labelIndex] = 1;
-                  return oneHot;
-                });
+              setAvailableColumns(headers);
+              if (problemType === "Classification") {
+                setLabelColumn(headers[headers.length - 1]);
+                setInputColumns(headers.slice(0, -1));
               } else {
-                outputs = rawOutputs;
-              }
-
-              if (inputs.length > 0 && outputs.length > 0) {
-                setInputNeurons(inputs[0].length);
-                setOutputNeurons(outputs[0].length);
-                onDatasetUpload({ inputs, outputs });
-              } else {
-                alert("Parsed dataset has invalid input or output data.");
+                setOutputColumns([headers[headers.length - 1]]);
+                setInputColumns(headers.slice(0, -1));
               }
             },
             header: true,
-            skipEmptyLines: true,
+            skipEmptyLines: 'greedy',
+            dynamicTyping: false,
           });
         } else {
           alert("Unsupported file type. Use JSON or CSV.");
         }
       } catch (error) {
-        alert("Error parsing dataset: " + error);
+        alert(`Error parsing dataset: ${error}`);
       }
     };
 
     reader.readAsText(file);
   };
 
+  // Validate JSON dataset for correct structure and numeric values
+  const validateJSONDataset = (data: any): data is { inputs: number[][]; outputs: number[][] } => {
+    if (!data.inputs || !data.outputs || !Array.isArray(data.inputs) || !Array.isArray(data.outputs)) {
+      return false;
+    }
+    if (data.inputs.length === 0 || data.outputs.length === 0 || data.inputs.length !== data.outputs.length) {
+      return false;
+    }
+    const inputLength = data.inputs[0].length;
+    const outputLength = data.outputs[0].length;
+    return (
+      data.inputs.every((row: any) => Array.isArray(row) && row.length === inputLength && row.every((val: any) => typeof val === 'number' && !isNaN(val))) &&
+      data.outputs.every((row: any) => Array.isArray(row) && row.length === outputLength && row.every((val: any) => typeof val === 'number' && !isNaN(val)))
+    );
+  };
+
   const handleZoomIn = () => setZoomLevel(Math.min(zoomLevel + 0.1, 2));
   const handleZoomOut = () => setZoomLevel(Math.max(zoomLevel - 0.1, 0.5));
 
+  const handleLoadDataset = () => {
+    processCSV();
+  };
+
   return (
-    <div className="panel">
-      <div>
+    <div style={{ padding: 10, border: "1px solid #ccc", borderRadius: 4 }}>
+      <div style={{ marginBottom: 10 }}>
         <label>Activation Function</label>
         <select value={activationFunction} onChange={(e) => setActivationFunction(e.target.value)}>
           <option value="sigmoid">sigmoid</option>
@@ -216,7 +422,7 @@ const NetworkControls: React.FC<Props> = ({
         </select>
       </div>
 
-      <div>
+      <div style={{ marginBottom: 10 }}>
         <label>Problem Type</label>
         <select value={problemType} onChange={(e) => setProblemType(e.target.value)}>
           <option value="Classification">Classification</option>
@@ -224,42 +430,62 @@ const NetworkControls: React.FC<Props> = ({
         </select>
       </div>
 
-      <div>
+      <div style={{ marginBottom: 10 }}>
         <label>Input Neurons</label>
-        <input type="number" value={inputNeurons} readOnly />
+        <input
+          type="number"
+          value={inputNeurons}
+          onChange={(e) => {
+            const val = parseInt(e.target.value);
+            if (!isNaN(val) && val >= 1) setInputNeurons(val);
+          }}
+          min="1"
+          readOnly={hasDataset}
+        />
       </div>
 
-      <div>
+      <div style={{ marginBottom: 10 }}>
         <label>Output Neurons</label>
         <input
           type="number"
           value={outputNeurons}
-          onChange={(e) => setOutputNeurons(Math.max(1, parseInt(e.target.value)))}
+          onChange={(e) => {
+            const val = parseInt(e.target.value);
+            if (!isNaN(val) && val >= 1) setOutputNeurons(val);
+          }}
           min="1"
         />
       </div>
 
-      <div>
+      <div style={{ marginBottom: 10 }}>
         <label>Learning Rate</label>
         <input
           type="number"
           step="0.01"
           min="0.001"
           max="1"
-          defaultValue="0.1"
-          onChange={(e) => localStorage.setItem("learningRate", Math.max(0.001, parseFloat(e.target.value)).toString())}
+          value={learningRate}
+          onChange={(e) => {
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val) && val >= 0.001 && val <= 1) setLearningRate(val);
+          }}
         />
       </div>
 
-      <div>
+      <div style={{ marginBottom: 10 }}>
         <label>Epochs</label>
-        <input type="number" value={epochs} min={1} onChange={handleEpochChange} />
+        <input
+          type="number"
+          value={epochs}
+          min={1}
+          onChange={handleEpochChange}
+        />
         <span style={{ marginLeft: "10px" }}>
           (Training for {epochs} epoch{epochs !== 1 ? "s" : ""})
         </span>
       </div>
 
-      <div>
+      <div style={{ marginBottom: 10 }}>
         <label>Test Inputs</label>
         {testInputs.map((val, idx) => (
           <input
@@ -269,7 +495,8 @@ const NetworkControls: React.FC<Props> = ({
             value={val}
             onChange={(e) => {
               const newInputs = [...testInputs];
-              newInputs[idx] = parseFloat(e.target.value);
+              const val = parseFloat(e.target.value);
+              newInputs[idx] = isNaN(val) ? 0 : val;
               setTestInputs(newInputs);
             }}
             style={{ width: "60px", marginRight: "5px" }}
@@ -278,25 +505,84 @@ const NetworkControls: React.FC<Props> = ({
         <button onClick={handlePredict}>Predict</button>
       </div>
 
-      <div>
+      <div style={{ marginBottom: 10 }}>
         <label>Upload Dataset (JSON or CSV)</label>
         <input type="file" accept=".json,.csv" onChange={handleFileUpload} />
       </div>
 
-      <div className="mt-2">
+      {availableColumns.length > 0 && (
+        <div style={{ marginBottom: 10 }}>
+          <label>Select Input Columns</label>
+          <select
+            multiple
+            value={inputColumns}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map((option) => option.value);
+              setInputColumns(selected);
+            }}
+            style={{ width: "200px", height: "100px" }}
+          >
+            {availableColumns.map((col) => (
+              <option key={col} value={col}>{col}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {availableColumns.length > 0 && problemType === "Classification" && (
+        <div style={{ marginBottom: 10 }}>
+          <label>Select Label Column</label>
+          <select
+            value={labelColumn}
+            onChange={(e) => setLabelColumn(e.target.value)}
+          >
+            <option value="">Select a column</option>
+            {availableColumns.map((col) => (
+              <option key={col} value={col}>{col}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {availableColumns.length > 0 && problemType === "Regression" && (
+        <div style={{ marginBottom: 10 }}>
+          <label>Select Output Columns</label>
+          <select
+            multiple
+            value={outputColumns}
+            onChange={(e) => {
+              const selected = Array.from(e.target.selectedOptions).map((option) => option.value);
+              setOutputColumns(selected);
+            }}
+            style={{ width: "200px", height: "100px" }}
+          >
+            {availableColumns.map((col) => (
+              <option key={col} value={col}>{col}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {availableColumns.length > 0 && (
+        <button onClick={handleLoadDataset} style={{ marginBottom: 10 }}>
+          Load Dataset
+        </button>
+      )}
+
+      <div style={{ marginBottom: 10 }}>
         <label>Hidden Layers</label>
         <button onClick={addLayer} style={{ marginLeft: 10 }}>+ Add Layer</button>
       </div>
 
       {hiddenLayers.map((neurons, idx) => (
-        <div key={idx}>
+        <div key={idx} style={{ marginBottom: 5 }}>
           <span>Layer {idx + 1}: {neurons} neurons </span>
           <button onClick={() => updateLayer(idx, -1)}>-</button>
           <button onClick={() => updateLayer(idx, 1)}>+</button>
         </div>
       ))}
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginBottom: 10 }}>
         <label>
           <input
             type="checkbox"
@@ -307,7 +593,7 @@ const NetworkControls: React.FC<Props> = ({
         </label>
       </div>
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginBottom: 10 }}>
         <label>Line Thickness</label>
         <select value={lineThicknessMode} onChange={(e) => setLineThicknessMode(e.target.value as "auto" | "fixed")}>
           <option value="auto">Weight-based</option>
@@ -315,14 +601,14 @@ const NetworkControls: React.FC<Props> = ({
         </select>
       </div>
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginBottom: 10 }}>
         <label>Zoom</label>
         <button onClick={handleZoomIn} style={{ marginLeft: 10 }}>+</button>
         <button onClick={handleZoomOut} style={{ marginLeft: 5 }}>-</button>
         <span style={{ marginLeft: 10 }}>{(zoomLevel * 100).toFixed(0)}%</span>
       </div>
 
-      <div style={{ marginTop: 10 }}>
+      <div style={{ marginBottom: 10 }}>
         <label>Animation Speed</label>
         <input
           type="range"
@@ -335,7 +621,7 @@ const NetworkControls: React.FC<Props> = ({
         <span>{animationSpeed.toFixed(1)}x</span>
       </div>
 
-      <div style={{ marginTop: "20px" }}>
+      <div>
         <button onClick={() => onPlay(epochs)} disabled={isTraining && !isPaused}>
           Play
         </button>
