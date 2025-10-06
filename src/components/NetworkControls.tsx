@@ -1,4 +1,4 @@
-// NetworkControls.tsx
+
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 
@@ -69,7 +69,7 @@ const NetworkControls: React.FC<Props> = ({
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [fileContent, setFileContent] = useState<string | null>(null);
 
-  // Sync test inputs when inputNeurons changes, preserving valid values
+
   useEffect(() => {
     setTestInputs((prev) => {
       const newInputs = Array(inputNeurons).fill(0);
@@ -109,7 +109,7 @@ const NetworkControls: React.FC<Props> = ({
     onPredict(testInputs);
   };
 
-  // Classify columns as numeric or categorical and compute means for imputation
+
   const classifyColumns = (rows: any[], columns: string[]) => {
     const columnTypes = new Map<string, 'numeric' | 'categorical'>();
     const columnMeans = new Map<string, number>();
@@ -138,16 +138,16 @@ const NetworkControls: React.FC<Props> = ({
     return { columnTypes, columnMeans, columnUniques };
   };
 
-  // Validate and process row with imputation and encoding
+
   const processRow = (row: any, inputCols: string[], outputCols: string[], problemType: string, columnTypes: Map<string, 'numeric' | 'categorical'>, columnMeans: Map<string, number>, columnUniques: Map<string, Set<string>>, labelToIndex: Map<string, number>) => {
     const inputValues: number[] = [];
     for (const col of inputCols) {
       let val = row[col]?.toString().trim() || '';
       if (val.toUpperCase() === 'NA' || val === '') {
         if (columnTypes.get(col) === 'numeric') {
-          val = columnMeans.get(col)!.toString(); // Impute mean
+          val = columnMeans.get(col)!.toString(); 
         } else {
-          val = 'missing'; // Impute 'missing' for categorical
+          val = 'missing'; 
         }
       }
       if (columnTypes.get(col) === 'numeric') {
@@ -166,9 +166,9 @@ const NetworkControls: React.FC<Props> = ({
       let val = row[col]?.toString().trim() || '';
       if (val.toUpperCase() === 'NA' || val === '') {
         if (problemType === "Regression") {
-          val = columnMeans.get(col)!.toString(); // Impute mean for regression outputs
+          val = columnMeans.get(col)!.toString();
         } else {
-          return null; // Skip for classification
+          return null; 
         }
       }
       if (problemType === "Regression") {
@@ -236,7 +236,7 @@ const NetworkControls: React.FC<Props> = ({
             rows.map((row) => row[labelColumn]?.toString().trim().toLowerCase() || "")
               .filter((val) => val && val.toUpperCase() !== 'NA')
           )];
-          console.log("Unique labels:", uniqueValues); // Debug log
+          console.log("Unique labels:", uniqueValues); 
           if (uniqueValues.length === 0) {
             alert("No valid labels found in the selected label column.");
             return;
@@ -269,7 +269,7 @@ const NetworkControls: React.FC<Props> = ({
           return;
         }
 
-        // Classify all columns
+        
         const classificationResult = classifyColumns(rows, [...inputCols, ...outputCols]);
         if (!classificationResult) return;
         const { columnTypes, columnMeans, columnUniques } = classificationResult;
@@ -282,7 +282,7 @@ const NetworkControls: React.FC<Props> = ({
             rows.map((row) => row[labelColumn]?.toString().trim().toLowerCase() || "")
               .filter((val) => val && val.toUpperCase() !== 'NA')
           )];
-          uniqueValues.sort(); // Sort for consistent mapping
+          uniqueValues.sort();
           uniqueValues.forEach((val, idx) => labelToIndex.set(val, idx));
         }
 
@@ -388,7 +388,7 @@ const NetworkControls: React.FC<Props> = ({
     reader.readAsText(file);
   };
 
-  // Validate JSON dataset for correct structure and numeric values
+  
   const validateJSONDataset = (data: any): data is { inputs: number[][]; outputs: number[][] } => {
     if (!data.inputs || !data.outputs || !Array.isArray(data.inputs) || !Array.isArray(data.outputs)) {
       return false;
