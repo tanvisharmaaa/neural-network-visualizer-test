@@ -1,4 +1,4 @@
-// NetworkGraph.tsx
+
 import React, { useEffect } from "react";
 
 interface Props {
@@ -46,7 +46,7 @@ const NetworkGraph: React.FC<Props> = ({
   displayedWeights,
 }) => {
   useEffect(() => {
-    // Removed console.logs to reduce spam; can be added back for debugging if needed
+   
   }, [weights, displayedWeights, neuronValues]);
 
   const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
@@ -98,8 +98,8 @@ const NetworkGraph: React.FC<Props> = ({
     const a = Math.abs(neuronValues.get(`${layerIdx}-${neuronIdx}`) ?? 0);
 
     if (layerIdx === 0) {
-      // For z-score normalized inputs, use a scaled version
-      return Math.max(0, Math.min(1, Math.abs(a) * 0.5)); // Adjust factor for visibility
+      
+      return Math.max(0, Math.min(1, Math.abs(a) * 0.5)); 
     }
 
     const prevSize = layerSizes[layerIdx - 1];
@@ -114,7 +114,7 @@ const NetworkGraph: React.FC<Props> = ({
 
     const importance = a * relW;
 
-    return Math.max(0, Math.min(1, importance * 3)); // Amplify for better visibility
+    return Math.max(0, Math.min(1, importance * 3)); 
   };
 
   const getNeuronEquation = (layerIdx: number, neuronIdx: number) => {
@@ -161,7 +161,7 @@ const NetworkGraph: React.FC<Props> = ({
       totalParams += weightsCount + biasesCount;
       paramBreakdown.push(`Layer ${layerIdx}→${layerIdx + 1}: ${weightsCount} weights + ${biasesCount} biases`);
     }
-    // Removed console.log for parameter breakdown; can log if needed
+    
     return totalParams;
   };
 
@@ -265,10 +265,10 @@ const NetworkGraph: React.FC<Props> = ({
             layerIdx === 0 ? "#ADD8E6" :
             layerIdx <= hiddenLayers.length ? "#90EE90" : "#FFA07A";
 
-          const importance = getGlowForNeuron(layerIdx, neuronIdx); // 0..1
-          const glowPx = 14 * importance;                           // radius
-          const glowAlpha = importance;                              // opacity 0..1
-          const glowColor = `rgba(255, 165, 0, ${glowAlpha})`;       // orange glow
+          const importance = getGlowForNeuron(layerIdx, neuronIdx);
+          const glowPx = 14 * importance;                           
+          const glowAlpha = importance;                              
+          const glowColor = `rgba(255, 165, 0, ${glowAlpha})`;       
 
           const style = {
             filter: importance > 0.01 ? `drop-shadow(0 0 ${glowPx}px ${glowColor})` : "none",
