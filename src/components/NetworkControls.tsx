@@ -126,8 +126,10 @@ const NetworkControls: React.FC<Props> = ({
         problemType={problemType}
       />
       
-      <div style={{ marginBottom: 10 }}>
-        <label>Activation Function</label>
+      {hasDataset && (
+        <>
+          <div style={{ marginBottom: 10 }}>
+            <label>Activation Function</label>
         <select
           value={activationFunction}
           onChange={(e) => setActivationFunction(e.target.value)}
@@ -301,6 +303,8 @@ const NetworkControls: React.FC<Props> = ({
           Pause
         </button>
       </div>
+        </>
+      )}
     </div>
   );
 };

@@ -1029,23 +1029,29 @@ const NeuralNetworkVisualizer = React.memo(() => {
             setLearningRate={setLearningRate}
             hasDataset={dataset.inputs.length > 0}
           />
-          <button
-            onClick={handleStop}
-            disabled={!isTraining}
-            style={{ marginTop: "10px" }}
-          >
-            Stop Training
-          </button>
-          {loss && (
-            <p style={{ marginTop: "10px", color: "#27ae60" }}>Loss: {loss}</p>
+          {dataset.inputs.length > 0 && (
+            <button
+              onClick={handleStop}
+              disabled={!isTraining}
+              style={{ marginTop: "10px" }}
+            >
+              Stop Training
+            </button>
           )}
-          <LossChart lossHistory={lossHistory} problemType={problemType} />
-          {outputs.length > 0 && (
-            <div style={{ marginTop: "10px" }}>
-              <p style={{ color: "#27ae60" }}>
-                Predictions: {outputs.join(", ")}
-              </p>
-            </div>
+          {dataset.inputs.length > 0 && (
+            <>
+              {loss && (
+                <p style={{ marginTop: "10px", color: "#27ae60" }}>Loss: {loss}</p>
+              )}
+              <LossChart lossHistory={lossHistory} problemType={problemType} />
+              {outputs.length > 0 && (
+                <div style={{ marginTop: "10px" }}>
+                  <p style={{ color: "#27ae60" }}>
+                    Predictions: {outputs.join(", ")}
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
         <div
