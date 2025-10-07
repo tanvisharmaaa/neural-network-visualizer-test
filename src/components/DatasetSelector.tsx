@@ -51,8 +51,8 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
       name: "Diabetes Dataset",
       description: "Regression dataset with 6 normalized features for diabetes progression",
       filename: "diabetes-simplified.json",
-      inputColumns: ["Feature 1", "Feature 2", "Feature 3", "Feature 4", "Feature 5", "Feature 6"],
-      outputColumn: "Diabetes Progression",
+      inputColumns: ["age", "sex", "bmi", "bp", "s1", "s2"],
+      outputColumn: "disease_progression",
       problemType: "Regression",
     },
   ];
