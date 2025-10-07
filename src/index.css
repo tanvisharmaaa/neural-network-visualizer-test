@@ -5,7 +5,7 @@ body {
   padding: 0;
   background-color: #f6f8fa; /* Soft page background */
   color: #222222; /* Slightly dark text for contrast */
-  font-family: 'Arial', sans-serif;
+  font-family: "Arial", sans-serif;
 }
 
 * {
@@ -43,7 +43,10 @@ button:hover {
 }
 
 /* Titles */
-h1, h2, h3, label {
+h1,
+h2,
+h3,
+label {
   color: #222;
 }
 
@@ -57,10 +60,18 @@ h1, h2, h3, label {
 }
 
 /* Utility margins */
-.mt-1 { margin-top: 10px; }
-.mt-2 { margin-top: 20px; }
-.mb-1 { margin-bottom: 10px; }
-.mb-2 { margin-bottom: 20px; }
+.mt-1 {
+  margin-top: 10px;
+}
+.mt-2 {
+  margin-top: 20px;
+}
+.mb-1 {
+  margin-bottom: 10px;
+}
+.mb-2 {
+  margin-bottom: 20px;
+}
 
 /* Form layout */
 form > div {

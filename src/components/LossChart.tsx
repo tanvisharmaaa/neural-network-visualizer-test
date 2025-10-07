@@ -11,9 +11,27 @@ import {
   Legend,
 } from "chart.js";
 
-ChartJS.register(LineElement, PointElement, LinearScale, CategoryScale, Tooltip, Legend);
+ChartJS.register(
+  LineElement,
+  PointElement,
+  LinearScale,
+  CategoryScale,
+  Tooltip,
+  Legend
+);
 
-const LossChart = ({ lossHistory, problemType }: { lossHistory: { loss: number; metric: number; val_loss?: number; val_metric?: number }[]; problemType: string }) => {
+const LossChart = ({
+  lossHistory,
+  problemType,
+}: {
+  lossHistory: {
+    loss: number;
+    metric: number;
+    val_loss?: number;
+    val_metric?: number;
+  }[];
+  problemType: string;
+}) => {
   const [visibleMetrics, setVisibleMetrics] = useState({
     loss: true,
     metric: true,
@@ -30,8 +48,8 @@ const LossChart = ({ lossHistory, problemType }: { lossHistory: { loss: number; 
     );
   }
 
-  const metricLabel = problemType === "Regression" ? 'MAE' : 'Accuracy';
-  const valMetricLabel = problemType === "Regression" ? 'RMSE' : 'Val Accuracy';
+  const metricLabel = problemType === "Regression" ? "MAE" : "Accuracy";
+  const valMetricLabel = problemType === "Regression" ? "RMSE" : "Val Accuracy";
 
   const data = {
     labels: lossHistory.map((_, i) => `Epoch ${i + 1}`),
@@ -120,7 +138,12 @@ const LossChart = ({ lossHistory, problemType }: { lossHistory: { loss: number; 
           <input
             type="checkbox"
             checked={visibleMetrics.loss}
-            onChange={() => setVisibleMetrics({ ...visibleMetrics, loss: !visibleMetrics.loss })}
+            onChange={() =>
+              setVisibleMetrics({
+                ...visibleMetrics,
+                loss: !visibleMetrics.loss,
+              })
+            }
           />
           Loss
         </label>
@@ -128,7 +151,12 @@ const LossChart = ({ lossHistory, problemType }: { lossHistory: { loss: number; 
           <input
             type="checkbox"
             checked={visibleMetrics.metric}
-            onChange={() => setVisibleMetrics({ ...visibleMetrics, metric: !visibleMetrics.metric })}
+            onChange={() =>
+              setVisibleMetrics({
+                ...visibleMetrics,
+                metric: !visibleMetrics.metric,
+              })
+            }
           />
           {metricLabel}
         </label>
@@ -136,7 +164,12 @@ const LossChart = ({ lossHistory, problemType }: { lossHistory: { loss: number; 
           <input
             type="checkbox"
             checked={visibleMetrics.val_loss}
-            onChange={() => setVisibleMetrics({ ...visibleMetrics, val_loss: !visibleMetrics.val_loss })}
+            onChange={() =>
+              setVisibleMetrics({
+                ...visibleMetrics,
+                val_loss: !visibleMetrics.val_loss,
+              })
+            }
           />
           Validation Loss
         </label>
@@ -144,7 +177,12 @@ const LossChart = ({ lossHistory, problemType }: { lossHistory: { loss: number; 
           <input
             type="checkbox"
             checked={visibleMetrics.val_metric}
-            onChange={() => setVisibleMetrics({ ...visibleMetrics, val_metric: !visibleMetrics.val_metric })}
+            onChange={() =>
+              setVisibleMetrics({
+                ...visibleMetrics,
+                val_metric: !visibleMetrics.val_metric,
+              })
+            }
           />
           {valMetricLabel}
         </label>

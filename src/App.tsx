@@ -1,11 +1,11 @@
-import NeuralNetworkVisualizer from './components/NeuralNetworkVisualizer'
+import NeuralNetworkVisualizer from "./components/NeuralNetworkVisualizer";
 
 function App() {
   return (
-    <div style={{ fontFamily: 'sans-serif' }}>
+    <div style={{ fontFamily: "sans-serif" }}>
       <NeuralNetworkVisualizer />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

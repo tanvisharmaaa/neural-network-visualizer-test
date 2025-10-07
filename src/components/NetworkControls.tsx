@@ -16,7 +16,11 @@ interface Props {
   showWeights: boolean;
   setShowWeights: (val: boolean) => void;
   onPredict: (inputs: number[]) => void;
-  onDatasetUpload: (data: { inputs: number[][]; outputs: number[][]; needsOutputNormalization?: boolean }) => void;
+  onDatasetUpload: (data: {
+    inputs: number[][];
+    outputs: number[][];
+    needsOutputNormalization?: boolean;
+  }) => void;
   lineThicknessMode: "auto" | "fixed";
   setLineThicknessMode: (mode: "auto" | "fixed") => void;
   zoomLevel: number;
@@ -61,7 +65,9 @@ const NetworkControls: React.FC<Props> = ({
   setLearningRate,
   hasDataset,
 }) => {
-  const [testInputs, setTestInputs] = useState<number[]>(Array(inputNeurons).fill(0));
+  const [testInputs, setTestInputs] = useState<number[]>(
+    Array(inputNeurons).fill(0)
+  );
   const [epochs, setEpochs] = useState<number>(1);
   const [labelColumn, setLabelColumn] = useState<string>("");
   const [outputColumns, setOutputColumns] = useState<string[]>([]);
@@ -111,26 +117,37 @@ const NetworkControls: React.FC<Props> = ({
 
   // Classify columns as numeric or categorical and compute means for imputation
   const classifyColumns = (rows: any[], columns: string[]) => {
-    const columnTypes = new Map<string, 'numeric' | 'categorical'>();
+    const columnTypes = new Map<string, "numeric" | "categorical">();
     const columnMeans = new Map<string, number>();
     const columnUniques = new Map<string, Set<string>>();
 
     columns.forEach((col) => {
-      const values = rows.map((row) => row[col]?.toString().trim() || '');
-      const nonMissingValues = values.filter((val) => val && val.toUpperCase() !== 'NA');
-      const isNumeric = nonMissingValues.length > 0 && nonMissingValues.every((val) => !isNaN(parseFloat(val)));
+      const values = rows.map((row) => row[col]?.toString().trim() || "");
+      const nonMissingValues = values.filter(
+        (val) => val && val.toUpperCase() !== "NA"
+      );
+      const isNumeric =
+        nonMissingValues.length > 0 &&
+        nonMissingValues.every((val) => !isNaN(parseFloat(val)));
 
-      columnTypes.set(col, isNumeric ? 'numeric' : 'categorical');
+      columnTypes.set(col, isNumeric ? "numeric" : "categorical");
 
       if (isNumeric) {
         const numValues = nonMissingValues.map((val) => parseFloat(val));
-        const mean = numValues.length > 0 ? numValues.reduce((a, b) => a + b, 0) / numValues.length : 0;
+        const mean =
+          numValues.length > 0
+            ? numValues.reduce((a, b) => a + b, 0) / numValues.length
+            : 0;
         columnMeans.set(col, mean);
       } else {
-        const uniques = new Set(nonMissingValues.map((val) => val.toLowerCase()));
+        const uniques = new Set(
+          nonMissingValues.map((val) => val.toLowerCase())
+        );
         columnUniques.set(col, uniques);
         if (uniques.size > 10) {
-          console.warn(`Column ${col} has too many unique values (${uniques.size}). Consider preprocessing.`);
+          console.warn(
+            `Column ${col} has too many unique values (${uniques.size}). Consider preprocessing.`
+          );
         }
       }
     });
@@ -139,18 +156,27 @@ const NetworkControls: React.FC<Props> = ({
   };
 
   // Validate and process row with imputation and encoding
-  const processRow = (row: any, inputCols: string[], outputCols: string[], problemType: string, columnTypes: Map<string, 'numeric' | 'categorical'>, columnMeans: Map<string, number>, columnUniques: Map<string, Set<string>>, labelToIndex: Map<string, number>) => {
+  const processRow = (
+    row: any,
+    inputCols: string[],
+    outputCols: string[],
+    problemType: string,
+    columnTypes: Map<string, "numeric" | "categorical">,
+    columnMeans: Map<string, number>,
+    columnUniques: Map<string, Set<string>>,
+    labelToIndex: Map<string, number>
+  ) => {
     const inputValues: number[] = [];
     for (const col of inputCols) {
-      let val = row[col]?.toString().trim() || '';
-      if (val.toUpperCase() === 'NA' || val === '') {
-        if (columnTypes.get(col) === 'numeric') {
+      let val = row[col]?.toString().trim() || "";
+      if (val.toUpperCase() === "NA" || val === "") {
+        if (columnTypes.get(col) === "numeric") {
           val = columnMeans.get(col)!.toString(); // Impute mean
         } else {
-          val = 'missing'; // Impute 'missing' for categorical
+          val = "missing"; // Impute 'missing' for categorical
         }
       }
-      if (columnTypes.get(col) === 'numeric') {
+      if (columnTypes.get(col) === "numeric") {
         const numVal = parseFloat(val);
         if (isNaN(numVal)) return null;
         inputValues.push(numVal);
@@ -163,8 +189,8 @@ const NetworkControls: React.FC<Props> = ({
 
     const outputValues: number[] = [];
     for (const col of outputCols) {
-      let val = row[col]?.toString().trim() || '';
-      if (val.toUpperCase() === 'NA' || val === '') {
+      let val = row[col]?.toString().trim() || "";
+      if (val.toUpperCase() === "NA" || val === "") {
         if (problemType === "Regression") {
           val = columnMeans.get(col)!.toString(); // Impute mean for regression outputs
         } else {
@@ -177,14 +203,17 @@ const NetworkControls: React.FC<Props> = ({
         outputValues.push(numVal);
       } else {
         const label = val.toLowerCase();
-        if (!label || label.toUpperCase() === 'NA') return null;
+        if (!label || label.toUpperCase() === "NA") return null;
         const index = labelToIndex.get(label);
         if (index === undefined) return null;
         outputValues.push(index);
       }
     }
 
-    if (inputValues.every((val) => !isNaN(val)) && outputValues.every((val) => !isNaN(val))) {
+    if (
+      inputValues.every((val) => !isNaN(val)) &&
+      outputValues.every((val) => !isNaN(val))
+    ) {
       return { input: inputValues, output: outputValues };
     }
     return null;
@@ -204,9 +233,11 @@ const NetworkControls: React.FC<Props> = ({
           return;
         }
 
-        const headers = Object.keys(data[0] || {}).filter((h) => h && h !== '');
+        const headers = Object.keys(data[0] || {}).filter((h) => h && h !== "");
         if (headers.length < 2) {
-          alert("Invalid headers: CSV must have at least 2 unique, non-empty column names.");
+          alert(
+            "Invalid headers: CSV must have at least 2 unique, non-empty column names."
+          );
           return;
         }
 
@@ -216,7 +247,9 @@ const NetworkControls: React.FC<Props> = ({
           return;
         }
 
-        const rows = data.filter((row) => row && Object.keys(row).length === headers.length);
+        const rows = data.filter(
+          (row) => row && Object.keys(row).length === headers.length
+        );
         if (rows.length === 0) {
           alert("CSV file contains no valid rows matching header count.");
           return;
@@ -232,23 +265,33 @@ const NetworkControls: React.FC<Props> = ({
             return;
           }
           outputCols = [labelColumn];
-          const uniqueValues = [...new Set(
-            rows.map((row) => row[labelColumn]?.toString().trim().toLowerCase() || "")
-              .filter((val) => val && val.toUpperCase() !== 'NA')
-          )];
+          const uniqueValues = [
+            ...new Set(
+              rows
+                .map(
+                  (row) =>
+                    row[labelColumn]?.toString().trim().toLowerCase() || ""
+                )
+                .filter((val) => val && val.toUpperCase() !== "NA")
+            ),
+          ];
           console.log("Unique labels:", uniqueValues); // Debug log
           if (uniqueValues.length === 0) {
             alert("No valid labels found in the selected label column.");
             return;
           }
           if (uniqueValues.length > 10) {
-            alert(`The selected label column has too many unique values (${uniqueValues.length}), which may indicate it's not a categorical label. Please select a different column.`);
+            alert(
+              `The selected label column has too many unique values (${uniqueValues.length}), which may indicate it's not a categorical label. Please select a different column.`
+            );
             return;
           }
           const isBinary = uniqueValues.length <= 2;
           assumedOutputNeurons = isBinary ? 1 : uniqueValues.length;
           if (assumedOutputNeurons !== outputNeurons) {
-            alert(`Classification requires ${assumedOutputNeurons} output neurons for ${uniqueValues.length} unique labels. Adjusting automatically.`);
+            alert(
+              `Classification requires ${assumedOutputNeurons} output neurons for ${uniqueValues.length} unique labels. Adjusting automatically.`
+            );
             setOutputNeurons(assumedOutputNeurons);
           }
         } else {
@@ -259,7 +302,9 @@ const NetworkControls: React.FC<Props> = ({
           outputCols = outputColumns;
           assumedOutputNeurons = outputColumns.length;
           if (assumedOutputNeurons !== outputNeurons) {
-            alert(`Regression requires ${assumedOutputNeurons} output neurons for selected columns. Adjusting automatically.`);
+            alert(
+              `Regression requires ${assumedOutputNeurons} output neurons for selected columns. Adjusting automatically.`
+            );
             setOutputNeurons(assumedOutputNeurons);
           }
         }
@@ -270,24 +315,43 @@ const NetworkControls: React.FC<Props> = ({
         }
 
         // Classify all columns
-        const classificationResult = classifyColumns(rows, [...inputCols, ...outputCols]);
+        const classificationResult = classifyColumns(rows, [
+          ...inputCols,
+          ...outputCols,
+        ]);
         if (!classificationResult) return;
-        const { columnTypes, columnMeans, columnUniques } = classificationResult;
+        const { columnTypes, columnMeans, columnUniques } =
+          classificationResult;
 
         const inputs: number[][] = [];
         let rawOutputs: number[][] = [];
         const labelToIndex = new Map<string, number>();
         if (problemType === "Classification") {
-          const uniqueValues = [...new Set(
-            rows.map((row) => row[labelColumn]?.toString().trim().toLowerCase() || "")
-              .filter((val) => val && val.toUpperCase() !== 'NA')
-          )];
+          const uniqueValues = [
+            ...new Set(
+              rows
+                .map(
+                  (row) =>
+                    row[labelColumn]?.toString().trim().toLowerCase() || ""
+                )
+                .filter((val) => val && val.toUpperCase() !== "NA")
+            ),
+          ];
           uniqueValues.sort(); // Sort for consistent mapping
           uniqueValues.forEach((val, idx) => labelToIndex.set(val, idx));
         }
 
         rows.forEach((row) => {
-          const processed = processRow(row, inputCols, outputCols, problemType, columnTypes, columnMeans, columnUniques, labelToIndex);
+          const processed = processRow(
+            row,
+            inputCols,
+            outputCols,
+            problemType,
+            columnTypes,
+            columnMeans,
+            columnUniques,
+            labelToIndex
+          );
           if (processed) {
             inputs.push(processed.input);
             rawOutputs.push(processed.output);
@@ -305,15 +369,25 @@ const NetworkControls: React.FC<Props> = ({
         }
 
         if (inputs.length > 0 && outputs.length > 0) {
-          console.log(`Input neurons: ${inputs[0].length} from columns: ${inputCols.join(', ')}`);
+          console.log(
+            `Input neurons: ${inputs[0].length} from columns: ${inputCols.join(
+              ", "
+            )}`
+          );
           setInputNeurons(inputs[0].length);
-          onDatasetUpload({ inputs, outputs, needsOutputNormalization: problemType === "Regression" });
+          onDatasetUpload({
+            inputs,
+            outputs,
+            needsOutputNormalization: problemType === "Regression",
+          });
         } else {
-          alert("Parsed dataset has no valid rows after filtering invalid or missing data. Check if selected columns have valid data.");
+          alert(
+            "Parsed dataset has no valid rows after filtering invalid or missing data. Check if selected columns have valid data."
+          );
         }
       },
       header: true,
-      skipEmptyLines: 'greedy',
+      skipEmptyLines: "greedy",
       dynamicTyping: false,
     });
   };
@@ -322,15 +396,17 @@ const NetworkControls: React.FC<Props> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const fileExtension = file.name.split('.').pop()?.toLowerCase();
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
     const reader = new FileReader();
 
     reader.onload = (event) => {
       try {
-        if (fileExtension === 'json') {
+        if (fileExtension === "json") {
           const data = JSON.parse(event.target?.result as string);
           if (!validateJSONDataset(data)) {
-            alert("Invalid JSON dataset: Must contain 'inputs' and 'outputs' arrays with consistent numeric values.");
+            alert(
+              "Invalid JSON dataset: Must contain 'inputs' and 'outputs' arrays with consistent numeric values."
+            );
             return;
           }
           setInputNeurons(data.inputs[0].length);
@@ -340,8 +416,11 @@ const NetworkControls: React.FC<Props> = ({
           setOutputColumns([]);
           setInputColumns([]);
           setFileContent(null);
-          onDatasetUpload({ ...data, needsOutputNormalization: problemType === "Regression" });
-        } else if (fileExtension === 'csv') {
+          onDatasetUpload({
+            ...data,
+            needsOutputNormalization: problemType === "Regression",
+          });
+        } else if (fileExtension === "csv") {
           const content = event.target?.result as string;
           setFileContent(content);
           Papa.parse(content, {
@@ -352,9 +431,13 @@ const NetworkControls: React.FC<Props> = ({
                 return;
               }
 
-              const headers = Object.keys(data[0] || {}).filter((h) => h && h !== '');
+              const headers = Object.keys(data[0] || {}).filter(
+                (h) => h && h !== ""
+              );
               if (headers.length < 2) {
-                alert("Invalid headers: CSV must have at least 2 unique, non-empty column names.");
+                alert(
+                  "Invalid headers: CSV must have at least 2 unique, non-empty column names."
+                );
                 return;
               }
 
@@ -374,7 +457,7 @@ const NetworkControls: React.FC<Props> = ({
               }
             },
             header: true,
-            skipEmptyLines: 'greedy',
+            skipEmptyLines: "greedy",
             dynamicTyping: false,
           });
         } else {
@@ -389,18 +472,39 @@ const NetworkControls: React.FC<Props> = ({
   };
 
   // Validate JSON dataset for correct structure and numeric values
-  const validateJSONDataset = (data: any): data is { inputs: number[][]; outputs: number[][] } => {
-    if (!data.inputs || !data.outputs || !Array.isArray(data.inputs) || !Array.isArray(data.outputs)) {
+  const validateJSONDataset = (
+    data: any
+  ): data is { inputs: number[][]; outputs: number[][] } => {
+    if (
+      !data.inputs ||
+      !data.outputs ||
+      !Array.isArray(data.inputs) ||
+      !Array.isArray(data.outputs)
+    ) {
       return false;
     }
-    if (data.inputs.length === 0 || data.outputs.length === 0 || data.inputs.length !== data.outputs.length) {
+    if (
+      data.inputs.length === 0 ||
+      data.outputs.length === 0 ||
+      data.inputs.length !== data.outputs.length
+    ) {
       return false;
     }
     const inputLength = data.inputs[0].length;
     const outputLength = data.outputs[0].length;
     return (
-      data.inputs.every((row: any) => Array.isArray(row) && row.length === inputLength && row.every((val: any) => typeof val === 'number' && !isNaN(val))) &&
-      data.outputs.every((row: any) => Array.isArray(row) && row.length === outputLength && row.every((val: any) => typeof val === 'number' && !isNaN(val)))
+      data.inputs.every(
+        (row: any) =>
+          Array.isArray(row) &&
+          row.length === inputLength &&
+          row.every((val: any) => typeof val === "number" && !isNaN(val))
+      ) &&
+      data.outputs.every(
+        (row: any) =>
+          Array.isArray(row) &&
+          row.length === outputLength &&
+          row.every((val: any) => typeof val === "number" && !isNaN(val))
+      )
     );
   };
 
@@ -415,7 +519,10 @@ const NetworkControls: React.FC<Props> = ({
     <div style={{ padding: 10, border: "1px solid #ccc", borderRadius: 4 }}>
       <div style={{ marginBottom: 10 }}>
         <label>Activation Function</label>
-        <select value={activationFunction} onChange={(e) => setActivationFunction(e.target.value)}>
+        <select
+          value={activationFunction}
+          onChange={(e) => setActivationFunction(e.target.value)}
+        >
           <option value="sigmoid">sigmoid</option>
           <option value="relu">relu</option>
           <option value="tanh">tanh</option>
@@ -424,7 +531,10 @@ const NetworkControls: React.FC<Props> = ({
 
       <div style={{ marginBottom: 10 }}>
         <label>Problem Type</label>
-        <select value={problemType} onChange={(e) => setProblemType(e.target.value)}>
+        <select
+          value={problemType}
+          onChange={(e) => setProblemType(e.target.value)}
+        >
           <option value="Classification">Classification</option>
           <option value="Regression">Regression</option>
         </select>
@@ -517,13 +627,17 @@ const NetworkControls: React.FC<Props> = ({
             multiple
             value={inputColumns}
             onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions).map((option) => option.value);
+              const selected = Array.from(e.target.selectedOptions).map(
+                (option) => option.value
+              );
               setInputColumns(selected);
             }}
             style={{ width: "200px", height: "100px" }}
           >
             {availableColumns.map((col) => (
-              <option key={col} value={col}>{col}</option>
+              <option key={col} value={col}>
+                {col}
+              </option>
             ))}
           </select>
         </div>
@@ -538,7 +652,9 @@ const NetworkControls: React.FC<Props> = ({
           >
             <option value="">Select a column</option>
             {availableColumns.map((col) => (
-              <option key={col} value={col}>{col}</option>
+              <option key={col} value={col}>
+                {col}
+              </option>
             ))}
           </select>
         </div>
@@ -551,13 +667,17 @@ const NetworkControls: React.FC<Props> = ({
             multiple
             value={outputColumns}
             onChange={(e) => {
-              const selected = Array.from(e.target.selectedOptions).map((option) => option.value);
+              const selected = Array.from(e.target.selectedOptions).map(
+                (option) => option.value
+              );
               setOutputColumns(selected);
             }}
             style={{ width: "200px", height: "100px" }}
           >
             {availableColumns.map((col) => (
-              <option key={col} value={col}>{col}</option>
+              <option key={col} value={col}>
+                {col}
+              </option>
             ))}
           </select>
         </div>
@@ -571,12 +691,16 @@ const NetworkControls: React.FC<Props> = ({
 
       <div style={{ marginBottom: 10 }}>
         <label>Hidden Layers</label>
-        <button onClick={addLayer} style={{ marginLeft: 10 }}>+ Add Layer</button>
+        <button onClick={addLayer} style={{ marginLeft: 10 }}>
+          + Add Layer
+        </button>
       </div>
 
       {hiddenLayers.map((neurons, idx) => (
         <div key={idx} style={{ marginBottom: 5 }}>
-          <span>Layer {idx + 1}: {neurons} neurons </span>
+          <span>
+            Layer {idx + 1}: {neurons} neurons{" "}
+          </span>
           <button onClick={() => updateLayer(idx, -1)}>-</button>
           <button onClick={() => updateLayer(idx, 1)}>+</button>
         </div>
@@ -595,7 +719,12 @@ const NetworkControls: React.FC<Props> = ({
 
       <div style={{ marginBottom: 10 }}>
         <label>Line Thickness</label>
-        <select value={lineThicknessMode} onChange={(e) => setLineThicknessMode(e.target.value as "auto" | "fixed")}>
+        <select
+          value={lineThicknessMode}
+          onChange={(e) =>
+            setLineThicknessMode(e.target.value as "auto" | "fixed")
+          }
+        >
           <option value="auto">Weight-based</option>
           <option value="fixed">Fixed</option>
         </select>
@@ -603,8 +732,12 @@ const NetworkControls: React.FC<Props> = ({
 
       <div style={{ marginBottom: 10 }}>
         <label>Zoom</label>
-        <button onClick={handleZoomIn} style={{ marginLeft: 10 }}>+</button>
-        <button onClick={handleZoomOut} style={{ marginLeft: 5 }}>-</button>
+        <button onClick={handleZoomIn} style={{ marginLeft: 10 }}>
+          +
+        </button>
+        <button onClick={handleZoomOut} style={{ marginLeft: 5 }}>
+          -
+        </button>
         <span style={{ marginLeft: 10 }}>{(zoomLevel * 100).toFixed(0)}%</span>
       </div>
 
@@ -622,7 +755,10 @@ const NetworkControls: React.FC<Props> = ({
       </div>
 
       <div>
-        <button onClick={() => onPlay(epochs)} disabled={isTraining && !isPaused}>
+        <button
+          onClick={() => onPlay(epochs)}
+          disabled={isTraining && !isPaused}
+        >
           Play
         </button>
         <button onClick={onPause} disabled={!isTraining || isPaused}>
