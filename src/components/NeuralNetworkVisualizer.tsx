@@ -102,8 +102,8 @@ const NeuralNetworkVisualizer = React.memo(() => {
   const [displayedConnections, setDisplayedConnections] = useState<Set<string>>(
     new Set()
   );
-  const [isTraining, setIsTraining] = useState(false);
-  const [isTrained, setIsTrained] = useState(false);
+  const [isTraining, setIsTraining] = useState(true);
+  const [isTrained, setIsTrained] = useState(true);
   const [neuronEquations, setNeuronEquations] = useState<Map<string, string>>(
     new Map()
   );
@@ -127,7 +127,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
     new Map()
   );
   const [animationSpeed, setAnimationSpeed] = useState(1);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
   const [learningRate, setLearningRate] = useState(0.1);
   const [inputMin, setInputMin] = useState<number[]>([]);
   const [inputMax, setInputMax] = useState<number[]>([]);
@@ -340,6 +340,9 @@ const NeuralNetworkVisualizer = React.memo(() => {
     return { activations, neuronValuesMap, parsedWeights, parsedBiases };
   };
   const trainModel = async (numEpochs: number) => {
+    console.log("trainModel called with numEpochs:", numEpochs);
+    console.log("Dataset inputs length:", dataset.inputs.length);
+    console.log("Dataset outputs length:", dataset.outputs.length);
     if (dataset.inputs.length === 0 || dataset.outputs.length === 0) {
       alert("Please upload a valid dataset first.");
       return;
@@ -915,6 +918,11 @@ const NeuralNetworkVisualizer = React.memo(() => {
       data.outputs.every((row) => row.length === data.outputs[0].length)
     ) {
       setDataset({ inputs: data.inputs, outputs: data.outputs });
+      console.log("Dataset uploaded successfully:", { inputs: data.inputs, outputs: data.outputs });
+      // Reset training state when new dataset is loaded
+      setIsTraining(false);
+      setIsPaused(false);
+      setIsTrained(false);
     }
   };
   useEffect(() => {
@@ -956,6 +964,10 @@ const NeuralNetworkVisualizer = React.memo(() => {
     }
   }, [dataset, hiddenLayers, inputNeurons, outputNeurons]);
   const handlePlay = async (epochs: number) => {
+    console.log("handlePlay called with epochs:", epochs);
+    console.log("Current dataset:", dataset);
+    console.log("isPaused:", isPaused);
+    console.log("isTraining:", isTraining);
     if (isPaused) {
       setIsPaused(false);
       if (pauseResolveRef.current) {
@@ -964,6 +976,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
       }
     } else {
       await trainModel(epochs);
+      console.log("handlePlay completed");
     }
   };
   const handlePause = () => {
@@ -993,9 +1006,10 @@ const NeuralNetworkVisualizer = React.memo(() => {
         padding: "20px",
         backgroundColor: "#ffffff",
         minHeight: "100vh",
+        fontFamily: "Roboto, Helvetica Neue, Arial, sans-serif"
       }}
     >
-      <h1 style={{ textAlign: "center", fontSize: "24px", color: "#333" }}>
+      <h1 style={{ textAlign: "center", fontSize: "32px", color: "#212121", fontWeight: "400", marginBottom: "30px", letterSpacing: "-0.02em" }}>
         Neural Network Visualizer
       </h1>
       <div style={{ display: "flex", gap: "20px" }}>
@@ -1033,7 +1047,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
             <button
               onClick={handleStop}
               disabled={!isTraining}
-              style={{ marginTop: "10px" }}
+              style={{ marginTop: "15px" }}
             >
               Stop Training
             </button>
@@ -1041,12 +1055,12 @@ const NeuralNetworkVisualizer = React.memo(() => {
           {dataset.inputs.length > 0 && (
             <>
               {loss && (
-                <p style={{ marginTop: "10px", color: "#27ae60" }}>Loss: {loss}</p>
+                <p style={{ marginTop: "15px", color: "#2e7d32", fontSize: "14px", fontWeight: "500" }}>Loss: {loss}</p>
               )}
               <LossChart lossHistory={lossHistory} problemType={problemType} />
               {outputs.length > 0 && (
-                <div style={{ marginTop: "10px" }}>
-                  <p style={{ color: "#27ae60" }}>
+                <div style={{ marginTop: "15px" }}>
+                  <p style={{ color: "#2e7d32", fontSize: "14px", fontWeight: "500" }}>
                     Predictions: {outputs.join(", ")}
                   </p>
                 </div>
@@ -1061,6 +1075,8 @@ const NeuralNetworkVisualizer = React.memo(() => {
             flex: 1,
             position: "relative",
             overflow: "auto",
+            minHeight: "600px",
+            maxHeight: "80vh",
             backgroundColor: "#ffffff",
           }}
         >
@@ -1092,7 +1108,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
             />
           ) : (
             <div
-              style={{ textAlign: "center", marginTop: "20px", color: "#666" }}
+              style={{ textAlign: "center", marginTop: "40px", color: "#757575", fontSize: "16px", fontWeight: "400" }}
             >
               <p>
                 No dataset loaded. Showing dummy network. Please load a dataset.

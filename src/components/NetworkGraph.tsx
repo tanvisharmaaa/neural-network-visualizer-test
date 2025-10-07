@@ -1,4 +1,3 @@
-
 import React, { useEffect } from "react";
 
 interface Props {
@@ -24,7 +23,7 @@ interface Props {
   displayedConnections?: any;
 }
 
-const NetworkGraph: React.FC<Props> = ({
+  const NetworkGraph: React.FC<Props> = ({
   inputNeurons,
   hiddenLayers,
   outputNeurons,
@@ -73,49 +72,7 @@ const NetworkGraph: React.FC<Props> = ({
     return index + neuronIdx;
   };
 
-  const layerMaxAvgAbsIncoming: number[] = (() => {
-    const maxes: number[] = Array(layerSizes.length).fill(1);
-    for (let L = 1; L < layerSizes.length; L++) {
-      const prevSize = layerSizes[L - 1];
-      const thisSize = layerSizes[L];
-      const W = weights[L - 1] || [];
-      let layerMax = 0;
-      for (let j = 0; j < thisSize; j++) {
-        let sumAbs = 0;
-        for (let i = 0; i < prevSize; i++) {
-          const w = W[i]?.[j] ?? 0;
-          sumAbs += Math.abs(w);
-        }
-        const avgAbs = prevSize > 0 ? sumAbs / prevSize : 0;
-        layerMax = Math.max(layerMax, avgAbs);
-      }
-      maxes[L] = layerMax || 1;
-    }
-    return maxes;
-  })();
 
-  const getGlowForNeuron = (layerIdx: number, neuronIdx: number) => {
-    const a = Math.abs(neuronValues.get(`${layerIdx}-${neuronIdx}`) ?? 0);
-
-    if (layerIdx === 0) {
-      
-      return Math.max(0, Math.min(1, Math.abs(a) * 0.5)); 
-    }
-
-    const prevSize = layerSizes[layerIdx - 1];
-    let sumAbs = 0;
-    for (let i = 0; i < prevSize; i++) {
-      const w = weights[layerIdx - 1]?.[i]?.[neuronIdx] ?? 0;
-      sumAbs += Math.abs(w);
-    }
-    const avgAbs = prevSize > 0 ? sumAbs / prevSize : 0;
-
-    const relW = avgAbs / (layerMaxAvgAbsIncoming[layerIdx] || 1);
-
-    const importance = a * relW;
-
-    return Math.max(0, Math.min(1, importance * 3)); 
-  };
 
   const getNeuronEquation = (layerIdx: number, neuronIdx: number) => {
     if (!hasDataset || layerIdx === 0 || !isTrained) return "";
@@ -190,8 +147,8 @@ const NetworkGraph: React.FC<Props> = ({
   const totalParams = calculateTotalParameters();
   const outputEquations = getOutputEquations();
 
-  const svgWidth = layerSizes.length * 150 + 100;
-  const svgHeight = Math.max(...layerSizes) * 100 + 400;
+  const svgWidth = Math.max(layerSizes.length * 150 + 100, 800);
+  const svgHeight = Math.max(Math.max(...layerSizes) * 100 + 400, 600);
 
   const getBezierPoint = (
     t: number,
@@ -211,19 +168,11 @@ const NetworkGraph: React.FC<Props> = ({
   return (
     <svg
       width="100%"
-      height="800"
-      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
-      style={{ backgroundColor: "#ffffff" }}
+      height="100%"
+      viewBox={`-50 -50 ${svgWidth + 100} ${svgHeight + 100}`}
+      style={{ backgroundColor: "#ffffff", minHeight: "600px" }}
+      preserveAspectRatio="xMidYMid meet"
     >
-      <defs>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
 
       <g transform={`scale(${zoomLevel})`}>
         {/* Edges */}
@@ -322,16 +271,9 @@ const NetworkGraph: React.FC<Props> = ({
               ? "#90EE90"
               : "#FFA07A";
 
-          const importance = getGlowForNeuron(layerIdx, neuronIdx); // 0..1
-          const glowPx = 14 * importance; // radius
-          const glowAlpha = importance; // opacity 0..1
-          const glowColor = `rgba(255, 165, 0, ${glowAlpha})`; // orange glow
 
           const style = {
-            filter:
-              importance > 0.01
-                ? `drop-shadow(0 0 ${glowPx}px ${glowColor})`
-                : "none",
+            filter: "none",
           };
 
           const equationKey = `${layerIdx}-${neuronIdx}`;
@@ -446,8 +388,8 @@ const NetworkGraph: React.FC<Props> = ({
       </g>
 
       <text
-        x={50}
-        y={svgHeight - 100}
+        x={0}
+        y={svgHeight - 50}
         textAnchor="start"
         dominantBaseline="middle"
         fontSize="12"
@@ -462,8 +404,8 @@ const NetworkGraph: React.FC<Props> = ({
         outputEquations.map((equation, index) => (
           <g key={index}>
             <text
-              x={50}
-              y={svgHeight - 60 + index * 20}
+              x={0}
+              y={svgHeight - 10 + index * 20}
               textAnchor="start"
               dominantBaseline="middle"
               fontSize="14"

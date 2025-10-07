@@ -593,15 +593,15 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
   };
 
   return (
-    <div style={{ marginBottom: "20px", padding: "15px", border: "1px solid #ddd", borderRadius: "8px", backgroundColor: "#f9f9f9" }}>
-      <h3 style={{ margin: "0 0 15px 0", color: "#333" }}>Dataset Selection</h3>
+    <div style={{ marginBottom: "20px", padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+      <h3 style={{ margin: "0 0 20px 0", color: "#212121", fontWeight: "500", fontSize: "20px", letterSpacing: "-0.02em" }}>Dataset Selection</h3>
       
       <div style={{ marginBottom: "15px" }}>
-        <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+        <label style={{ display: "block", marginBottom: "12px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>
           Choose Dataset Source:
         </label>
         <div style={{ display: "flex", gap: "15px" }}>
-          <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+          <label style={{ display: "flex", alignItems: "center", cursor: "pointer", fontSize: "14px", color: "#424242" }}>
             <input
               type="radio"
               name="datasetSource"
@@ -612,7 +612,7 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
             />
             Sample Dataset
           </label>
-          <label style={{ display: "flex", alignItems: "center", cursor: "pointer" }}>
+          <label style={{ display: "flex", alignItems: "center", cursor: "pointer", fontSize: "14px", color: "#424242" }}>
             <input
               type="radio"
               name="datasetSource"
@@ -628,7 +628,7 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
 
       {selectedOption === "sample" && (
         <div>
-          <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+          <label style={{ display: "block", marginBottom: "12px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>
             Select Sample Dataset:
           </label>
           <select
@@ -637,10 +637,13 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
             disabled={isLoading}
             style={{
               width: "100%",
-              padding: "8px",
+              padding: "10px 12px",
               borderRadius: "4px",
-              border: "1px solid #ccc",
+              border: "1px solid #e0e0e0",
               fontSize: "14px",
+              fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+              backgroundColor: "#fff",
+              color: "#424242"
             }}
           >
             <option value="">Choose a sample dataset...</option>
@@ -674,14 +677,22 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
       {selectedOption === "upload" && (
         <div style={{ padding: "15px", backgroundColor: "#fff", borderRadius: "4px", border: "1px solid #ddd" }}>
           <div style={{ marginBottom: "15px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>
               Upload Your Own Dataset (JSON or CSV)
             </label>
             <input 
               type="file" 
               accept=".json,.csv" 
               onChange={handleFileUpload}
-              style={{ marginBottom: "10px", width: "100%" }}
+              style={{ 
+                marginBottom: "10px", 
+                width: "100%",
+                padding: "8px",
+                border: "1px solid #e0e0e0",
+                borderRadius: "4px",
+                fontSize: "14px",
+                fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif"
+              }}
             />
             <p style={{ margin: "0", fontSize: "12px", color: "#666" }}>
               Upload a CSV file with headers or a JSON file with "inputs" and "outputs" arrays.
@@ -690,7 +701,32 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
 
           {availableColumns.length > 0 && (
             <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>
+                Problem Type
+              </label>
+              <select
+                value={problemType}
+                onChange={(e) => onProblemTypeChange(e.target.value)}
+                style={{ 
+                  width: "100%", 
+                  padding: "10px 12px", 
+                  border: "1px solid #e0e0e0", 
+                  borderRadius: "4px", 
+                  fontSize: "14px",
+                  fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+                  backgroundColor: "#fff",
+                  color: "#424242"
+                }}
+              >
+                <option value="Classification">Classification</option>
+                <option value="Regression">Regression</option>
+              </select>
+            </div>
+          )}
+
+          {availableColumns.length > 0 && (
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>
                 Select Input Columns
               </label>
               <select
@@ -702,7 +738,18 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
                   );
                   setInputColumns(selected);
                 }}
-                style={{ width: "100%", height: "100px", marginBottom: "10px" }}
+                style={{ 
+                  width: "100%", 
+                  height: "100px", 
+                  marginBottom: "10px",
+                  padding: "8px",
+                  border: "1px solid #e0e0e0", 
+                  borderRadius: "4px", 
+                  fontSize: "14px",
+                  fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+                  backgroundColor: "#fff",
+                  color: "#424242"
+                }}
               >
                 {availableColumns.map((col) => (
                   <option key={col} value={col}>
@@ -715,13 +762,23 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
 
           {availableColumns.length > 0 && problemType === "Classification" && (
             <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>
                 Select Label Column
               </label>
               <select
                 value={labelColumn}
                 onChange={(e) => setLabelColumn(e.target.value)}
-                style={{ width: "100%", marginBottom: "10px" }}
+                style={{ 
+                  width: "100%", 
+                  marginBottom: "10px",
+                  padding: "10px 12px", 
+                  border: "1px solid #e0e0e0", 
+                  borderRadius: "4px", 
+                  fontSize: "14px",
+                  fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+                  backgroundColor: "#fff",
+                  color: "#424242"
+                }}
               >
                 <option value="">Select a column</option>
                 {availableColumns.map((col) => (
@@ -735,7 +792,7 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
 
           {availableColumns.length > 0 && problemType === "Regression" && (
             <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>
                 Select Output Columns
               </label>
               <select
@@ -747,7 +804,18 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
                   );
                   setOutputColumns(selected);
                 }}
-                style={{ width: "100%", height: "100px", marginBottom: "10px" }}
+                style={{ 
+                  width: "100%", 
+                  height: "100px", 
+                  marginBottom: "10px",
+                  padding: "8px",
+                  border: "1px solid #e0e0e0", 
+                  borderRadius: "4px", 
+                  fontSize: "14px",
+                  fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+                  backgroundColor: "#fff",
+                  color: "#424242"
+                }}
               >
                 {availableColumns.map((col) => (
                   <option key={col} value={col}>
@@ -762,13 +830,19 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
             <button 
               onClick={processCSV} 
               style={{ 
-                padding: "8px 16px", 
-                backgroundColor: "#007bff", 
+                padding: "12px 24px", 
+                backgroundColor: "#1976d2", 
                 color: "white", 
                 border: "none", 
                 borderRadius: "4px", 
-                cursor: "pointer" 
+                cursor: "pointer",
+                fontSize: "14px",
+                fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+                fontWeight: "500",
+                transition: "background-color 0.2s ease"
               }}
+              onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = "#1565c0"}
+              onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = "#1976d2"}
             >
               Load Dataset
             </button>

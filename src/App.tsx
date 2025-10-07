@@ -2,7 +2,7 @@ import NeuralNetworkVisualizer from "./components/NeuralNetworkVisualizer";
 
 function App() {
   return (
-    <div style={{ fontFamily: "sans-serif" }}>
+    <div style={{ fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif" }}>
       <NeuralNetworkVisualizer />
     </div>
   );

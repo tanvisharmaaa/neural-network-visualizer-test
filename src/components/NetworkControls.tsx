@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import DatasetSelector from "./DatasetSelector";
 
@@ -117,7 +116,7 @@ const NetworkControls: React.FC<Props> = ({
 
 
   return (
-    <div style={{ padding: 10, border: "1px solid #ccc", borderRadius: 4 }}>
+    <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
       <DatasetSelector
         onDatasetLoad={onDatasetUpload}
         onInputNeuronsChange={setInputNeurons}
@@ -128,11 +127,21 @@ const NetworkControls: React.FC<Props> = ({
       
       {hasDataset && (
         <>
-          <div style={{ marginBottom: 10 }}>
-            <label>Activation Function</label>
+          <div style={{ marginBottom: "15px" }}>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>Activation Function</label>
         <select
           value={activationFunction}
           onChange={(e) => setActivationFunction(e.target.value)}
+          style={{ 
+            width: "100%", 
+            padding: "10px 12px", 
+            border: "1px solid #e0e0e0", 
+            borderRadius: "4px", 
+            fontSize: "14px",
+            fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+            backgroundColor: "#fff",
+            color: "#424242"
+          }}
         >
           <option value="sigmoid">sigmoid</option>
           <option value="relu">relu</option>
@@ -140,11 +149,21 @@ const NetworkControls: React.FC<Props> = ({
         </select>
       </div>
 
-      <div style={{ marginBottom: 10 }}>
-        <label>Problem Type</label>
+      <div style={{ marginBottom: "15px" }}>
+        <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>Problem Type</label>
         <select
           value={problemType}
           onChange={(e) => setProblemType(e.target.value)}
+          style={{ 
+            width: "100%", 
+            padding: "10px 12px", 
+            border: "1px solid #e0e0e0", 
+            borderRadius: "4px", 
+            fontSize: "14px",
+            fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+            backgroundColor: "#fff",
+            color: "#424242"
+          }}
         >
           <option value="Classification">Classification</option>
           <option value="Regression">Regression</option>
@@ -244,24 +263,35 @@ const NetworkControls: React.FC<Props> = ({
         </div>
       ))}
 
-      <div style={{ marginBottom: 10 }}>
-        <label>
+      <div style={{ marginBottom: "15px" }}>
+        <label style={{ display: "flex", alignItems: "center", cursor: "pointer", fontSize: "14px", color: "#424242" }}>
           <input
             type="checkbox"
             checked={showWeights}
             onChange={(e) => setShowWeights(e.target.checked)}
+            style={{ marginRight: "8px" }}
           />
           Show Weights on Edges
         </label>
       </div>
 
-      <div style={{ marginBottom: 10 }}>
-        <label>Line Thickness</label>
+      <div style={{ marginBottom: "15px" }}>
+        <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", fontSize: "14px", color: "#424242" }}>Line Thickness</label>
         <select
           value={lineThicknessMode}
           onChange={(e) =>
             setLineThicknessMode(e.target.value as "auto" | "fixed")
           }
+          style={{ 
+            width: "100%", 
+            padding: "10px 12px", 
+            border: "1px solid #e0e0e0", 
+            borderRadius: "4px", 
+            fontSize: "14px",
+            fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+            backgroundColor: "#fff",
+            color: "#424242"
+          }}
         >
           <option value="auto">Weight-based</option>
           <option value="fixed">Fixed</option>
