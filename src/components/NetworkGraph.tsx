@@ -1,4 +1,4 @@
-// NetworkGraph.tsx
+
 import React, { useEffect } from "react";
 
 interface Props {
@@ -46,7 +46,7 @@ const NetworkGraph: React.FC<Props> = ({
   displayedWeights,
 }) => {
   useEffect(() => {
-    // Removed console.logs to reduce spam; can be added back for debugging if needed
+   
   }, [weights, displayedWeights, neuronValues]);
 
   const layerSizes = [inputNeurons, ...hiddenLayers, outputNeurons];
@@ -98,8 +98,8 @@ const NetworkGraph: React.FC<Props> = ({
     const a = Math.abs(neuronValues.get(`${layerIdx}-${neuronIdx}`) ?? 0);
 
     if (layerIdx === 0) {
-      // For z-score normalized inputs, use a scaled version
-      return Math.max(0, Math.min(1, Math.abs(a) * 0.5)); // Adjust factor for visibility
+      
+      return Math.max(0, Math.min(1, Math.abs(a) * 0.5)); 
     }
 
     const prevSize = layerSizes[layerIdx - 1];
@@ -114,7 +114,7 @@ const NetworkGraph: React.FC<Props> = ({
 
     const importance = a * relW;
 
-    return Math.max(0, Math.min(1, importance * 3)); // Amplify for better visibility
+    return Math.max(0, Math.min(1, importance * 3)); 
   };
 
   const getNeuronEquation = (layerIdx: number, neuronIdx: number) => {
@@ -182,7 +182,7 @@ const NetworkGraph: React.FC<Props> = ({
         }: ${weightsCount} weights + ${biasesCount} biases`
       );
     }
-    // Removed console.log for parameter breakdown; can log if needed
+    
     return totalParams;
   };
 

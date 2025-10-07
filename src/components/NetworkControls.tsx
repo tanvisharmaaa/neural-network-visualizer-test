@@ -1,4 +1,4 @@
-// NetworkControls.tsx
+
 import React, { useState, useEffect } from "react";
 import Papa from "papaparse";
 
@@ -75,7 +75,7 @@ const NetworkControls: React.FC<Props> = ({
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [fileContent, setFileContent] = useState<string | null>(null);
 
-  // Sync test inputs when inputNeurons changes, preserving valid values
+
   useEffect(() => {
     setTestInputs((prev) => {
       const newInputs = Array(inputNeurons).fill(0);
@@ -115,7 +115,7 @@ const NetworkControls: React.FC<Props> = ({
     onPredict(testInputs);
   };
 
-  // Classify columns as numeric or categorical and compute means for imputation
+
   const classifyColumns = (rows: any[], columns: string[]) => {
     const columnTypes = new Map<string, "numeric" | "categorical">();
     const columnMeans = new Map<string, number>();
@@ -192,9 +192,9 @@ const NetworkControls: React.FC<Props> = ({
       let val = row[col]?.toString().trim() || "";
       if (val.toUpperCase() === "NA" || val === "") {
         if (problemType === "Regression") {
-          val = columnMeans.get(col)!.toString(); // Impute mean for regression outputs
+          val = columnMeans.get(col)!.toString();
         } else {
-          return null; // Skip for classification
+          return null; 
         }
       }
       if (problemType === "Regression") {
