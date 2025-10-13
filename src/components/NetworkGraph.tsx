@@ -21,6 +21,7 @@ interface Props {
   isTrained: boolean;
   displayedWeights: Map<string, number>;
   displayedConnections?: any;
+  featureLabels?: string[];
 }
 
   const NetworkGraph: React.FC<Props> = ({
@@ -43,6 +44,7 @@ interface Props {
   hasDataset,
   isTrained,
   displayedWeights,
+  featureLabels,
 }) => {
   useEffect(() => {
    
@@ -319,6 +321,19 @@ interface Props {
                       1
                     }`}
               </text>
+              {layerIdx === 0 && featureLabels && featureLabels[neuronIdx] && (
+                <text
+                  x={pos.x - 40}
+                  y={pos.y}
+                  textAnchor="end"
+                  dominantBaseline="middle"
+                  fontSize="10"
+                  fill="#666"
+                  style={{ fontWeight: "500" }}
+                >
+                  {featureLabels[neuronIdx]}
+                </text>
+              )}
               {layerIdx === 0 && currentInputs.length > neuronIdx && (
                 <text
                   x={pos.x}

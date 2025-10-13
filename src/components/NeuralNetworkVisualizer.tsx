@@ -121,6 +121,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
     inputs: number[][];
     outputs: number[][];
   }>({ inputs: [], outputs: [] });
+  const [featureLabels, setFeatureLabels] = useState<string[]>([]);
   const [debugWeights, setDebugWeights] = useState<string>("");
   const [trainingPhase, setTrainingPhase] = useState<string>("");
   const [displayedWeights, setDisplayedWeights] = useState<Map<string, number>>(
@@ -909,6 +910,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
     inputs: number[][];
     outputs: number[][];
     needsOutputNormalization?: boolean;
+    featureLabels?: string[];
   }) => {
     if (
       data.inputs.length > 0 &&
@@ -918,7 +920,8 @@ const NeuralNetworkVisualizer = React.memo(() => {
       data.outputs.every((row) => row.length === data.outputs[0].length)
     ) {
       setDataset({ inputs: data.inputs, outputs: data.outputs });
-      console.log("Dataset uploaded successfully:", { inputs: data.inputs, outputs: data.outputs });
+      setFeatureLabels(data.featureLabels || []);
+      console.log("Dataset uploaded successfully:", { inputs: data.inputs, outputs: data.outputs, featureLabels: data.featureLabels });
       // Reset training state when new dataset is loaded
       setIsTraining(false);
       setIsPaused(false);
@@ -961,6 +964,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
       setHiddenLayers([2]);
       setWeights(initializeZeroWeights(3, [2], 1));
       setBiases(initializeZeroBiases([2], 1));
+      setFeatureLabels([]);
     }
   }, [dataset, hiddenLayers, inputNeurons, outputNeurons]);
   const handlePlay = async (epochs: number) => {
@@ -1105,6 +1109,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
               isTrained={isTrained}
               displayedWeights={displayedWeights}
               displayedConnections={displayedConnections}
+              featureLabels={featureLabels}
             />
           ) : (
             <div

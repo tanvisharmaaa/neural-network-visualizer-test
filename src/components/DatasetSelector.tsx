@@ -6,6 +6,7 @@ interface DatasetSelectorProps {
     inputs: number[][];
     outputs: number[][];
     needsOutputNormalization?: boolean;
+    featureLabels?: string[];
   }) => void;
   onInputNeuronsChange: (neurons: number) => void;
   onOutputNeuronsChange: (neurons: number) => void;
@@ -81,6 +82,7 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
           inputs: jsonData.inputs,
           outputs: jsonData.outputs,
           needsOutputNormalization: dataset.problemType === "Regression",
+          featureLabels: dataset.inputColumns,
         });
         setIsLoading(false);
         return;
@@ -188,6 +190,7 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
                 inputs,
                 outputs,
                 needsOutputNormalization: dataset.problemType === "Regression",
+                featureLabels: dataset.inputColumns,
               });
             } else {
               alert("Failed to process sample dataset. No valid data found.");
@@ -460,10 +463,40 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
 
         if (inputs.length > 0 && outputs.length > 0) {
           onInputNeuronsChange(inputs[0].length);
+          
+          // Generate feature labels accounting for one-hot encoding
+          const finalFeatureLabels: string[] = [];
+          let featureIndex = 0;
+          
+          for (const col of inputCols) {
+            const columnType = columnTypes.get(col);
+            if (columnType === "numeric") {
+              finalFeatureLabels.push(col);
+              featureIndex++;
+            } else {
+              // For categorical columns, create labels for each one-hot encoded feature
+              const uniques = columnUniques.get(col);
+              if (uniques) {
+                const sortedUniques = Array.from(uniques).sort();
+                for (const uniqueValue of sortedUniques) {
+                  finalFeatureLabels.push(`${col}_${uniqueValue}`);
+                  featureIndex++;
+                }
+              }
+            }
+          }
+          
+          // Fill any remaining features with generic labels
+          while (featureIndex < inputs[0].length) {
+            finalFeatureLabels.push(`Feature ${featureIndex + 1}`);
+            featureIndex++;
+          }
+          
           onDatasetLoad({
             inputs,
             outputs,
             needsOutputNormalization: problemType === "Regression",
+            featureLabels: finalFeatureLabels,
           });
         } else {
           alert(
@@ -501,9 +534,16 @@ const DatasetSelector: React.FC<DatasetSelectorProps> = ({
           setOutputColumns([]);
           setInputColumns([]);
           setFileContent(null);
+          
+          // Generate generic feature labels for JSON datasets
+          const genericFeatureLabels = Array(data.inputs[0].length)
+            .fill(0)
+            .map((_, i) => `Feature ${i + 1}`);
+          
           onDatasetLoad({
             ...data,
             needsOutputNormalization: problemType === "Regression",
+            featureLabels: genericFeatureLabels,
           });
         } else if (fileExtension === "csv") {
           const content = event.target?.result as string;
