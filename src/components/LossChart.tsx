@@ -94,21 +94,24 @@ const LossChart = ({
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: "top" as const,
+        display: false, // Hide legend to save space
       },
     },
     scales: {
       y: {
         beginAtZero: false,
-        title: { display: true, text: "Loss" },
+        title: { display: false, text: "Loss" },
+        ticks: { font: { size: 8 } },
       },
       y1: {
         position: "right" as const,
         beginAtZero: true,
         max: problemType === "Regression" ? undefined : 1,
-        title: { display: true, text: metricLabel },
+        title: { display: false, text: metricLabel },
+        ticks: { font: { size: 8 } },
         grid: {
           drawOnChartArea: false, // Avoid overlapping grids
         },
@@ -117,23 +120,24 @@ const LossChart = ({
         y2: {
           position: "right" as const,
           beginAtZero: true,
-          title: { display: true, text: valMetricLabel },
+          title: { display: false, text: valMetricLabel },
+          ticks: { font: { size: 8 } },
           grid: {
             drawOnChartArea: false,
           },
         },
       }),
       x: {
-        title: { display: true, text: "Epochs" },
+        title: { display: false, text: "Epochs" },
+        ticks: { font: { size: 8 } },
       },
     },
   };
 
   return (
-    <div style={{ marginTop: 20 }}>
-      <h3 style={{ textAlign: "center" }}>Training Metrics</h3>
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ marginRight: 10 }}>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ marginBottom: "5px", fontSize: "10px" }}>
+        <label style={{ marginRight: "8px", fontSize: "10px" }}>
           <input
             type="checkbox"
             checked={visibleMetrics.loss}
@@ -143,10 +147,11 @@ const LossChart = ({
                 loss: !visibleMetrics.loss,
               })
             }
+            style={{ transform: "scale(0.7)" }}
           />
           Loss
         </label>
-        <label style={{ marginRight: 10 }}>
+        <label style={{ marginRight: "8px", fontSize: "10px" }}>
           <input
             type="checkbox"
             checked={visibleMetrics.metric}
@@ -156,10 +161,11 @@ const LossChart = ({
                 metric: !visibleMetrics.metric,
               })
             }
+            style={{ transform: "scale(0.7)" }}
           />
           {metricLabel}
         </label>
-        <label style={{ marginRight: 10 }}>
+        <label style={{ marginRight: "8px", fontSize: "10px" }}>
           <input
             type="checkbox"
             checked={visibleMetrics.val_loss}
@@ -169,10 +175,11 @@ const LossChart = ({
                 val_loss: !visibleMetrics.val_loss,
               })
             }
+            style={{ transform: "scale(0.7)" }}
           />
-          Validation Loss
+          Val Loss
         </label>
-        <label>
+        <label style={{ fontSize: "10px" }}>
           <input
             type="checkbox"
             checked={visibleMetrics.val_metric}
@@ -182,11 +189,14 @@ const LossChart = ({
                 val_metric: !visibleMetrics.val_metric,
               })
             }
+            style={{ transform: "scale(0.7)" }}
           />
-          {valMetricLabel}
+          Val {metricLabel}
         </label>
       </div>
-      <Line data={data} options={options} />
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Line data={data} options={options} />
+      </div>
     </div>
   );
 };

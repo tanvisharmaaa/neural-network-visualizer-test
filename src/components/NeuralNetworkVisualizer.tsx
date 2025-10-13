@@ -1061,7 +1061,6 @@ const NeuralNetworkVisualizer = React.memo(() => {
               {loss && (
                 <p style={{ marginTop: "15px", color: "#2e7d32", fontSize: "14px", fontWeight: "500" }}>Loss: {loss}</p>
               )}
-              <LossChart lossHistory={lossHistory} problemType={problemType} />
               {outputs.length > 0 && (
                 <div style={{ marginTop: "15px" }}>
                   <p style={{ color: "#2e7d32", fontSize: "14px", fontWeight: "500" }}>
@@ -1072,59 +1071,84 @@ const NeuralNetworkVisualizer = React.memo(() => {
             </>
           )}
         </div>
-        <div
-          className="graph-panel"
-          ref={graphPanelRef}
-          style={{
-            flex: 1,
-            position: "relative",
-            overflow: "auto",
-            minHeight: "600px",
-            maxHeight: "80vh",
-            backgroundColor: "#ffffff",
-          }}
-        >
-          {inputNeurons > 0 && outputNeurons > 0 ? (
-            <NetworkGraph
-              key={`${inputNeurons}-${outputNeurons}`}
-              inputNeurons={inputNeurons}
-              hiddenLayers={hiddenLayers}
-              outputNeurons={outputNeurons}
-              weights={weights}
-              biases={biases}
-              activationFunction={activationFunction}
-              pulses={pulses}
-              neuronEquations={neuronEquations}
-              neuronValues={neuronValues}
-              showWeights={showWeights}
-              lineThicknessMode={lineThicknessMode}
-              zoomLevel={zoomLevel}
-              epochDisplay={epochDisplay}
-              problemType={problemType}
-              currentInputs={currentInputs}
-              outputs={outputs}
-              hasDataset={
-                dataset.inputs.length > 0 && dataset.outputs.length > 0
-              }
-              isTrained={isTrained}
-              displayedWeights={displayedWeights}
-              displayedConnections={displayedConnections}
-              featureLabels={featureLabels}
-            />
-          ) : (
-            <div
-              style={{ textAlign: "center", marginTop: "40px", color: "#757575", fontSize: "16px", fontWeight: "400" }}
-            >
-              <p>
-                No dataset loaded. Showing dummy network. Please load a dataset.
-              </p>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div
+            className="graph-panel"
+            ref={graphPanelRef}
+            style={{
+              position: "relative",
+              overflow: "auto",
+              minHeight: "500px",
+              maxHeight: "70vh",
+              backgroundColor: "#ffffff",
+              border: "1px solid #e0e0e0",
+              borderRadius: "8px",
+            }}
+          >
+            {inputNeurons > 0 && outputNeurons > 0 ? (
+              <NetworkGraph
+                key={`${inputNeurons}-${outputNeurons}`}
+                inputNeurons={inputNeurons}
+                hiddenLayers={hiddenLayers}
+                outputNeurons={outputNeurons}
+                weights={weights}
+                biases={biases}
+                activationFunction={activationFunction}
+                pulses={pulses}
+                neuronEquations={neuronEquations}
+                neuronValues={neuronValues}
+                showWeights={showWeights}
+                lineThicknessMode={lineThicknessMode}
+                zoomLevel={zoomLevel}
+                epochDisplay={epochDisplay}
+                problemType={problemType}
+                currentInputs={currentInputs}
+                outputs={outputs}
+                hasDataset={
+                  dataset.inputs.length > 0 && dataset.outputs.length > 0
+                }
+                isTrained={isTrained}
+                displayedWeights={displayedWeights}
+                displayedConnections={displayedConnections}
+                featureLabels={featureLabels}
+              />
+            ) : (
+              <div
+                style={{ textAlign: "center", marginTop: "40px", color: "#757575", fontSize: "16px", fontWeight: "400" }}
+              >
+                <p>
+                  No dataset loaded. Showing dummy network. Please load a dataset.
+                </p>
+              </div>
+            )}
+            {(debugWeights || trainingPhase) && (
+              <DebugWeightsDisplay
+                debugWeights={debugWeights}
+                trainingPhase={trainingPhase}
+              />
+            )}
+          </div>
+          
+          {/* Loss Chart below the network */}
+          {dataset.inputs.length > 0 && lossHistory.length > 0 && (
+            <div style={{
+              backgroundColor: "#ffffff",
+              border: "1px solid #e0e0e0",
+              borderRadius: "8px",
+              padding: "10px",
+              height: "240px",
+              width: "480px"
+            }}>
+              <h3 style={{ 
+                margin: "0 0 8px 0", 
+                color: "#212121", 
+                fontWeight: "500", 
+                fontSize: "14px" 
+              }}>
+                Training Progress
+              </h3>
+              <LossChart lossHistory={lossHistory} problemType={problemType} />
             </div>
-          )}
-          {(debugWeights || trainingPhase) && (
-            <DebugWeightsDisplay
-              debugWeights={debugWeights}
-              trainingPhase={trainingPhase}
-            />
           )}
         </div>
       </div>
