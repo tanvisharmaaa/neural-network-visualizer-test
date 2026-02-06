@@ -150,7 +150,7 @@ interface Props {
   const outputEquations = getOutputEquations();
 
   const svgWidth = Math.max(layerSizes.length * 150 + 100, 800);
-  const svgHeight = Math.max(Math.max(...layerSizes) * 100 + 400, 600);
+  const svgHeight = Math.max(Math.max(...layerSizes) * 100 + 250, 600);
 
   const getBezierPoint = (
     t: number,
