@@ -660,14 +660,6 @@ const NeuralNetworkVisualizer = React.memo(() => {
           ...p,
           progress: Math.min(1, progress),
         }));
-        ```
-        const midY =
-          pulses.length > 0 ? (pulses[0].from.y + pulses[0].to.y) / 2 : 0;
-        if (graphPanelRef.current && pulses.length > 0) {
-          const scrollTop = midY - graphPanelRef.current.clientHeight / 2;
-          graphPanelRef.current.scrollTop = scrollTop;
-        }
-        ```
         setPulses(updatedPulses);
         setDisplayedConnections(new Set(newDisplayedConnections));
         if (progress >= 1) {
@@ -801,13 +793,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
           ...p,
           progress: Math.min(1, progress),
         }));
-        ```const midY =
-          pulses.length > 0 ? (pulses[0].from.y + pulses[0].to.y) / 2 : 0;
-        if (graphPanelRef.current && pulses.length > 0) {
-          const scrollTop = midY - graphPanelRef.current.clientHeight / 2;
-          graphPanelRef.current.scrollTop = scrollTop;
-        }
-        ```
+
         setPulses(updatedPulses);
         setDisplayedConnections(new Set(newDisplayedConnections));
         if (progress >= 1) {
