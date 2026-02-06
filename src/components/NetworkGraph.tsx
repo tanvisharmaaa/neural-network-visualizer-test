@@ -152,6 +152,10 @@ interface Props {
   const svgWidth = Math.max(layerSizes.length * 150 + 100, 800);
   const svgHeight = Math.max(Math.max(...layerSizes) * 100 + 250, 600);
 
+  const footerY = svgHeight - 30;    
+  const eqStartY = footerY + 18;       
+  const eqLineGap = 16
+
   const getBezierPoint = (
     t: number,
     start: { x: number; y: number },
@@ -404,7 +408,7 @@ interface Props {
 
       <text
         x={0}
-        y={svgHeight - 50}
+        y={footerY}
         textAnchor="start"
         dominantBaseline="middle"
         fontSize="12"
@@ -420,7 +424,7 @@ interface Props {
           <g key={index}>
             <text
               x={0}
-              y={svgHeight - 10 + index * 20}
+              y={eqStartY + index * eqLineGap}
               textAnchor="start"
               dominantBaseline="middle"
               fontSize="14"
