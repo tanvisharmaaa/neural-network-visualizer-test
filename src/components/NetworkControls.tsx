@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import DatasetSelector from "./DatasetSelector";
 
 interface Props {
   hiddenLayers: number[];
@@ -15,24 +14,17 @@ interface Props {
   showWeights: boolean;
   setShowWeights: (val: boolean) => void;
   onPredict: (inputs: number[]) => void;
-  onDatasetUpload: (data: {
-    inputs: number[][];
-    outputs: number[][];
-    needsOutputNormalization?: boolean;
-  }) => void;
   lineThicknessMode: "auto" | "fixed";
   setLineThicknessMode: (mode: "auto" | "fixed") => void;
   zoomLevel: number;
   setZoomLevel: (level: number) => void;
-  onPlay: (epochs: number) => void;
-  onPause: () => void;
-  isTraining: boolean;
-  isPaused: boolean;
   animationSpeed: number;
   setAnimationSpeed: (speed: number) => void;
   learningRate: number;
   setLearningRate: (rate: number) => void;
   hasDataset: boolean;
+  epochs: number;
+  setEpochs: (epochs: number) => void;
 }
 
 const NetworkControls: React.FC<Props> = ({
@@ -49,25 +41,21 @@ const NetworkControls: React.FC<Props> = ({
   showWeights,
   setShowWeights,
   onPredict,
-  onDatasetUpload,
   lineThicknessMode,
   setLineThicknessMode,
   zoomLevel,
   setZoomLevel,
-  onPlay,
-  onPause,
-  isTraining,
-  isPaused,
   animationSpeed,
   setAnimationSpeed,
   learningRate,
   setLearningRate,
   hasDataset,
+  epochs,
+  setEpochs,
 }) => {
   const [testInputs, setTestInputs] = useState<number[]>(
     Array(inputNeurons).fill(0)
   );
-  const [epochs, setEpochs] = useState<number>(1);
 
 
   useEffect(() => {
@@ -112,19 +100,11 @@ const NetworkControls: React.FC<Props> = ({
 
 
   const handleZoomIn = () => setZoomLevel(Math.min(zoomLevel + 0.1, 2));
-  const handleZoomOut = () => setZoomLevel(Math.max(zoomLevel - 0.1, 0.5));
+  const handleZoomOut = () => setZoomLevel(Math.max(zoomLevel - 0.1, 0.1)); // Allow zooming out below 0.5
 
 
   return (
-    <div style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-      <DatasetSelector
-        onDatasetLoad={onDatasetUpload}
-        onInputNeuronsChange={setInputNeurons}
-        onOutputNeuronsChange={setOutputNeurons}
-        onProblemTypeChange={setProblemType}
-        problemType={problemType}
-      />
-      
+    <div>
       {hasDataset && (
         <>
           <div style={{ marginBottom: "15px" }}>
@@ -322,17 +302,6 @@ const NetworkControls: React.FC<Props> = ({
         <span>{animationSpeed.toFixed(1)}x</span>
       </div>
 
-      <div>
-        <button
-          onClick={() => onPlay(epochs)}
-          disabled={isTraining && !isPaused}
-        >
-          Play
-        </button>
-        <button onClick={onPause} disabled={!isTraining || isPaused}>
-          Pause
-        </button>
-      </div>
         </>
       )}
     </div>

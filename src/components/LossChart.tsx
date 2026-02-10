@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -31,12 +30,6 @@ const LossChart = ({
   }[];
   problemType: string;
 }) => {
-  const [visibleMetrics, setVisibleMetrics] = useState({
-    loss: true,
-    metric: true,
-    val_loss: true,
-    val_metric: true,
-  });
 
   if (lossHistory.length === 0) {
     return (
@@ -51,9 +44,9 @@ const LossChart = ({
   const valMetricLabel = problemType === "Regression" ? "RMSE" : "Val Accuracy";
 
   const data = {
-    labels: lossHistory.map((_, i) => `Epoch ${i + 1}`),
+    labels: lossHistory.map((_, i) => `${i + 1}`),
     datasets: [
-      visibleMetrics.loss && {
+      {
         label: "Loss",
         data: lossHistory.map((h) => h.loss),
         borderColor: "#e74c3c",
@@ -62,7 +55,7 @@ const LossChart = ({
         fill: false,
         tension: 0.4,
       },
-      visibleMetrics.metric && {
+      {
         label: metricLabel,
         data: lossHistory.map((h) => h.metric || 0),
         borderColor: "#2ecc71",
@@ -71,7 +64,7 @@ const LossChart = ({
         fill: false,
         tension: 0.4,
       },
-      visibleMetrics.val_loss && {
+      {
         label: "Validation Loss",
         data: lossHistory.map((h) => h.val_loss ?? null),
         borderColor: "#f1c40f",
@@ -80,7 +73,7 @@ const LossChart = ({
         fill: false,
         tension: 0.4,
       },
-      visibleMetrics.val_metric && {
+      {
         label: valMetricLabel,
         data: lossHistory.map((h) => h.val_metric ?? null),
         borderColor: "#9b59b6",
@@ -89,7 +82,7 @@ const LossChart = ({
         fill: false,
         tension: 0.4,
       },
-    ].filter(Boolean) as any[],
+    ],
   };
 
   const options = {
@@ -97,7 +90,8 @@ const LossChart = ({
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false, // Hide legend to save space
+        display: true, // Show legend
+        position: 'top' as const,
       },
     },
     scales: {
@@ -105,6 +99,9 @@ const LossChart = ({
         beginAtZero: false,
         title: { display: false, text: "Loss" },
         ticks: { font: { size: 8 } },
+        grid: {
+          drawOnChartArea: false,
+        },
       },
       y1: {
         position: "right" as const,
@@ -113,7 +110,7 @@ const LossChart = ({
         title: { display: false, text: metricLabel },
         ticks: { font: { size: 8 } },
         grid: {
-          drawOnChartArea: false, // Avoid overlapping grids
+          drawOnChartArea: false,
         },
       },
       ...(problemType === "Regression" && {
@@ -128,72 +125,17 @@ const LossChart = ({
         },
       }),
       x: {
-        title: { display: false, text: "Epochs" },
+        title: { display: true, text: "Epoch" },
         ticks: { font: { size: 8 } },
+        grid: {
+          drawOnChartArea: false,
+        },
       },
     },
   };
 
   return (
     <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ marginBottom: "5px", fontSize: "10px" }}>
-        <label style={{ marginRight: "8px", fontSize: "10px" }}>
-          <input
-            type="checkbox"
-            checked={visibleMetrics.loss}
-            onChange={() =>
-              setVisibleMetrics({
-                ...visibleMetrics,
-                loss: !visibleMetrics.loss,
-              })
-            }
-            style={{ transform: "scale(0.7)" }}
-          />
-          Loss
-        </label>
-        <label style={{ marginRight: "8px", fontSize: "10px" }}>
-          <input
-            type="checkbox"
-            checked={visibleMetrics.metric}
-            onChange={() =>
-              setVisibleMetrics({
-                ...visibleMetrics,
-                metric: !visibleMetrics.metric,
-              })
-            }
-            style={{ transform: "scale(0.7)" }}
-          />
-          {metricLabel}
-        </label>
-        <label style={{ marginRight: "8px", fontSize: "10px" }}>
-          <input
-            type="checkbox"
-            checked={visibleMetrics.val_loss}
-            onChange={() =>
-              setVisibleMetrics({
-                ...visibleMetrics,
-                val_loss: !visibleMetrics.val_loss,
-              })
-            }
-            style={{ transform: "scale(0.7)" }}
-          />
-          Val Loss
-        </label>
-        <label style={{ fontSize: "10px" }}>
-          <input
-            type="checkbox"
-            checked={visibleMetrics.val_metric}
-            onChange={() =>
-              setVisibleMetrics({
-                ...visibleMetrics,
-                val_metric: !visibleMetrics.val_metric,
-              })
-            }
-            style={{ transform: "scale(0.7)" }}
-          />
-          Val {metricLabel}
-        </label>
-      </div>
       <div style={{ flex: 1, minHeight: 0 }}>
         <Line data={data} options={options} />
       </div>

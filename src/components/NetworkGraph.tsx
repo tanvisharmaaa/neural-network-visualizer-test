@@ -60,7 +60,7 @@ interface Props {
       for (let neuronIdx = 0; neuronIdx < count; neuronIdx++) {
         positions[neuronIndex] = {
           x: layerIdx * 150 + 50,
-          y: neuronIdx * 100 - totalHeight / 2 + 250,
+          y: neuronIdx * 100 - totalHeight / 2 + 50, // Restored +50 offset to maintain alignment
         };
         neuronIndex++;
       }
@@ -149,8 +149,35 @@ interface Props {
   const totalParams = calculateTotalParameters();
   const outputEquations = getOutputEquations();
 
-  const svgWidth = Math.max(layerSizes.length * 150 + 100, 800);
-  const svgHeight = Math.max(Math.max(...layerSizes) * 100 + 400, 600);
+
+  const paddingX = 25; 
+  const minX = Math.min(...positions.map(p => p.x)) - paddingX;
+  const maxX = Math.max(...positions.map(p => p.x)) + paddingX;
+  const minY = Math.min(...positions.map(p => p.y));
+  const maxY = Math.max(...positions.map(p => p.y));
+  
+  
+  const contentWidth = maxX - minX;
+  
+  
+  const svgWidth = contentWidth;
+
+  
+  const graphTopY = minY;
+  const graphBottomY = maxY;
+  const centerXForText = (minX + maxX) / 2; 
+  const footerFontSize = 8; 
+  const eqFontSize = 8; 
+  const footerY = graphTopY - 1; 
+  const eqStartY = graphBottomY + 1; 
+  const eqLineGap = 12 
+  
+
+  const totalMinY = Math.min(minY, footerY) - 3; 
+  const equationsHeight = outputEquations.length > 0 
+    ? eqStartY + (outputEquations.length - 1) * eqLineGap + eqFontSize 
+    : graphBottomY; 
+  const totalMaxY = Math.max(maxY, equationsHeight) + 3; 
 
   const getBezierPoint = (
     t: number,
@@ -167,16 +194,19 @@ interface Props {
     return { x, y };
   };
 
+  
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2; 
+
   return (
     <svg
       width="100%"
       height="100%"
-      viewBox={`-50 -50 ${svgWidth + 100} ${svgHeight + 100}`}
-      style={{ backgroundColor: "#ffffff", minHeight: "600px" }}
-      preserveAspectRatio="xMidYMid meet"
+      viewBox={`${minX} ${totalMinY} ${svgWidth} ${totalMaxY - totalMinY}`}
+      style={{ backgroundColor: "#ffffff", display: "block", margin: "0 auto" }}
+      preserveAspectRatio="xMidYMin meet"
     >
-
-      <g transform={`scale(${zoomLevel})`}>
+      <g transform={`translate(${centerX}, ${centerY}) scale(${zoomLevel}) translate(${-centerX}, ${-centerY})`}>
         {/* Edges */}
         {layerSizes.slice(0, -1).map((fromSize, layerIdx) => {
           const startIndex =
@@ -217,8 +247,9 @@ interface Props {
                       ? 1 + Math.abs(weight || 0) * 2
                       : 2;
 
-                  const staggerY = toIdx * 10;
-                  const offsetY = 10;
+                  const staggerY = toIdx * 15;
+                  const offsetY = 15;
+                  const offsetX = (toIdx % 2 === 0 ? 1 : -1) * 8; 
 
                   return (
                     <g key={connectionKey}>
@@ -235,19 +266,27 @@ interface Props {
                         hasDataset &&
                         isTrained &&
                         weight !== undefined && (
-                          <text
-                            x={midX}
-                            y={midY + offsetY + staggerY}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            fontSize="10"
-                            fill="#666"
-                            style={{
-                              backgroundColor: "rgba(255, 255, 255, 0.9)",
-                            }}
-                          >
-                            w={weight.toFixed(2)}
-                          </text>
+                          <g>
+                            <rect
+                              x={midX + offsetX - 25}
+                              y={midY + offsetY + staggerY - 8}
+                              width="50"
+                              height="16"
+                              fill="rgba(255, 255, 255, 0.9)"
+                              stroke="none"
+                              rx="3"
+                            />
+                            <text
+                              x={midX + offsetX}
+                              y={midY + offsetY + staggerY}
+                              textAnchor="middle"
+                              dominantBaseline="middle"
+                              fontSize="10"
+                              fill="#666"
+                            >
+                              w={weight.toFixed(2)}
+                            </text>
+                          </g>
                         )}
                     </g>
                   );
@@ -308,7 +347,7 @@ interface Props {
                 y={pos.y}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize="12"
+                fontSize="10"
               >
                 {layerIdx === 0
                   ? `x${neuronIdx + 1}`
@@ -402,28 +441,31 @@ interface Props {
         })}
       </g>
 
+      {/* Footer text centered at top */}
       <text
-        x={0}
-        y={svgHeight - 50}
-        textAnchor="start"
-        dominantBaseline="middle"
-        fontSize="12"
+        x={centerXForText}
+        y={footerY}
+        textAnchor="middle"
+        dominantBaseline="hanging"
+        fontSize={footerFontSize}
         fill="#333"
+        fontFamily="Arial, sans-serif"
       >
-        {`Epoch: ${epochDisplay} | Total Parameters: ${totalParams} | Activation: ${activationFunction} | Problem Type: ${problemType}`}
+        {`Epoch: ${epochDisplay} | Params: ${totalParams} | ${activationFunction} | ${problemType}`}
       </text>
 
+      {/* Output equations centered, close to graph bottom */}
       {hasDataset &&
         outputEquations.length > 0 &&
         isTrained &&
         outputEquations.map((equation, index) => (
           <g key={index}>
             <text
-              x={0}
-              y={svgHeight - 10 + index * 20}
-              textAnchor="start"
-              dominantBaseline="middle"
-              fontSize="14"
+              x={centerXForText}
+              y={eqStartY + index * eqLineGap}
+              textAnchor="middle"
+              dominantBaseline="hanging"
+              fontSize={eqFontSize}
               fill="#333"
             >
               {truncateEquation(equation)}

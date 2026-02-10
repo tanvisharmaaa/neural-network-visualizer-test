@@ -3,6 +3,7 @@ import * as tf from "@tensorflow/tfjs";
 import NetworkControls from "./NetworkControls";
 import NetworkGraph from "./NetworkGraph";
 import LossChart from "./LossChart";
+import DatasetSelector from "./DatasetSelector";
 interface DebugWeightsDisplayProps {
   debugWeights: string;
   trainingPhase: string;
@@ -115,7 +116,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
   const [lineThicknessMode, setLineThicknessMode] = useState<"auto" | "fixed">(
     "auto"
   );
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(0.21); // Zoomed out by 30% (0.3 * 0.7 = 0.21)
   const [model, setModel] = useState<tf.Sequential | null>(null);
   const [dataset, setDataset] = useState<{
     inputs: number[][];
@@ -130,6 +131,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
   const [animationSpeed, setAnimationSpeed] = useState(1);
   const [isPaused, setIsPaused] = useState(true);
   const [learningRate, setLearningRate] = useState(0.1);
+  const [epochs, setEpochs] = useState(1);
   const [inputMin, setInputMin] = useState<number[]>([]);
   const [inputMax, setInputMax] = useState<number[]>([]);
   const [outputMin, setOutputMin] = useState<number[]>([]);
@@ -199,7 +201,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
       for (let neuronIdx = 0; neuronIdx < count; neuronIdx++) {
         positions[neuronIndex] = {
           x: layerIdx * 150 + 50,
-          y: neuronIdx * 100 - totalHeight / 2 + 250,
+          y: neuronIdx * 100 - totalHeight / 2 + 50, // Start much closer to top
         };
         neuronIndex++;
       }
@@ -660,12 +662,6 @@ const NeuralNetworkVisualizer = React.memo(() => {
           ...p,
           progress: Math.min(1, progress),
         }));
-        const midY =
-          pulses.length > 0 ? (pulses[0].from.y + pulses[0].to.y) / 2 : 0;
-        if (graphPanelRef.current && pulses.length > 0) {
-          const scrollTop = midY - graphPanelRef.current.clientHeight / 2;
-          graphPanelRef.current.scrollTop = scrollTop;
-        }
         setPulses(updatedPulses);
         setDisplayedConnections(new Set(newDisplayedConnections));
         if (progress >= 1) {
@@ -799,12 +795,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
           ...p,
           progress: Math.min(1, progress),
         }));
-        const midY =
-          pulses.length > 0 ? (pulses[0].from.y + pulses[0].to.y) / 2 : 0;
-        if (graphPanelRef.current && pulses.length > 0) {
-          const scrollTop = midY - graphPanelRef.current.clientHeight / 2;
-          graphPanelRef.current.scrollTop = scrollTop;
-        }
+
         setPulses(updatedPulses);
         setDisplayedConnections(new Set(newDisplayedConnections));
         if (progress >= 1) {
@@ -1014,75 +1005,215 @@ const NeuralNetworkVisualizer = React.memo(() => {
       }}
     >
       <h1 style={{ textAlign: "center", fontSize: "32px", color: "#212121", fontWeight: "400", marginBottom: "30px", letterSpacing: "-0.02em" }}>
-        Neural Network Visualizer
+        NeuroViz
       </h1>
-      <div style={{ display: "flex", gap: "20px" }}>
-        <div className="panel" style={{ flex: "0 0 280px" }}>
-          <NetworkControls
-            hiddenLayers={hiddenLayers}
-            setHiddenLayers={setHiddenLayers}
-            inputNeurons={inputNeurons}
-            setInputNeurons={setInputNeurons}
-            outputNeurons={outputNeurons}
-            setOutputNeurons={setOutputNeurons}
-            activationFunction={activationFunction}
-            setActivationFunction={setActivationFunction}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "20px", marginBottom: "20px" }}>
+        {/* Left: Dataset Selector */}
+        <div className="panel" style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: "20px" }}>
+          <DatasetSelector
+            onDatasetLoad={onDatasetUpload}
+            onInputNeuronsChange={setInputNeurons}
+            onOutputNeuronsChange={setOutputNeurons}
+            onProblemTypeChange={setProblemType}
             problemType={problemType}
-            setProblemType={setProblemType}
-            showWeights={showWeights}
-            setShowWeights={setShowWeights}
-            onPredict={predict}
-            onDatasetUpload={onDatasetUpload}
-            lineThicknessMode={lineThicknessMode}
-            setLineThicknessMode={setLineThicknessMode}
-            zoomLevel={zoomLevel}
-            setZoomLevel={setZoomLevel}
-            onPlay={handlePlay}
-            onPause={handlePause}
-            isTraining={isTraining}
-            isPaused={isPaused}
-            animationSpeed={animationSpeed}
-            setAnimationSpeed={setAnimationSpeed}
-            learningRate={learningRate}
-            setLearningRate={setLearningRate}
-            hasDataset={dataset.inputs.length > 0}
           />
+          
+          {/* Information Panel */}
           {dataset.inputs.length > 0 && (
-            <button
-              onClick={handleStop}
-              disabled={!isTraining}
-              style={{ marginTop: "15px" }}
-            >
-              Stop Training
-            </button>
+            <div style={{ padding: "15px", backgroundColor: "#ffffff", border: "1px solid #e0e0e0", borderRadius: "8px" }}>
+              <h3 style={{ margin: "0 0 15px 0", color: "#212121", fontWeight: "500", fontSize: "16px", letterSpacing: "-0.02em" }}>Network Information</h3>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px", fontSize: "13px" }}>
+                {/* Dataset Info */}
+                <div>
+                  <div style={{ fontWeight: "600", color: "#424242", marginBottom: "4px" }}>Dataset</div>
+                  <div style={{ color: "#666", paddingLeft: "8px" }}>
+                    <div>Samples: {dataset.inputs.length}</div>
+                    <div>Features: {inputNeurons}</div>
+                    <div>Type: {problemType}</div>
+                  </div>
+                </div>
+                
+                {/* Network Architecture */}
+                <div>
+                  <div style={{ fontWeight: "600", color: "#424242", marginBottom: "4px" }}>Architecture</div>
+                  <div style={{ color: "#666", paddingLeft: "8px" }}>
+                    <div>Input: {inputNeurons}</div>
+                    <div>Hidden: [{hiddenLayers.join(", ")}]</div>
+                    <div>Output: {outputNeurons}</div>
+                    <div>Activation: {activationFunction}</div>
+                  </div>
+                </div>
+                
+                {/* Training Status */}
+                <div>
+                  <div style={{ fontWeight: "600", color: "#424242", marginBottom: "4px" }}>Training Status</div>
+                  <div style={{ color: "#666", paddingLeft: "8px" }}>
+                    <div>Status: {isTraining ? (isPaused ? "Paused" : "Training") : isTrained ? "Trained" : "Not Started"}</div>
+                    <div>Epoch: {epochDisplay} / {epochs}</div>
+                    {loss && <div>Current Loss: {loss}</div>}
+                    {lossHistory.length > 0 && (
+                      <div>Best Loss: {Math.min(...lossHistory.map(h => h.loss)).toFixed(4)}</div>
+                    )}
+                    {lossHistory.length > 0 && problemType === "Classification" && (
+                      <div>Best Accuracy: {(Math.max(...lossHistory.map(h => h.metric)) * 100).toFixed(2)}%</div>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Hyperparameters */}
+                <div>
+                  <div style={{ fontWeight: "600", color: "#424242", marginBottom: "4px" }}>Hyperparameters</div>
+                  <div style={{ color: "#666", paddingLeft: "8px" }}>
+                    <div>Learning Rate: {learningRate}</div>
+                    <div>Animation Speed: {animationSpeed}x</div>
+                  </div>
+                </div>
+                
+                {/* Model Stats */}
+                {weights.length > 0 && (
+                  <div>
+                    <div style={{ fontWeight: "600", color: "#424242", marginBottom: "4px" }}>Model Statistics</div>
+                    <div style={{ color: "#666", paddingLeft: "8px" }}>
+                      {(() => {
+                        let totalParams = 0;
+                        weights.forEach((layer, i) => {
+                          layer.forEach(neuronWeights => {
+                            totalParams += neuronWeights.length;
+                          });
+                          if (biases[i]) {
+                            totalParams += biases[i].length;
+                          }
+                        });
+                        return <div>Total Parameters: {totalParams}</div>;
+                      })()}
+                      <div>Layers: {weights.length}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
+        </div>
+        
+        {/* Middle: Play/Pause/Stop Controls */}
+        <div className="panel" style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", justifyContent: "flex-start" }}>
           {dataset.inputs.length > 0 && (
             <>
+              <div style={{ marginTop: "auto", display: "flex", gap: "10px", flexDirection: "column", width: "100%" }}>
+                <div style={{ marginBottom: "10px" }}>
+                  <label style={{ display: "block", marginBottom: "5px", fontSize: "12px", color: "#424242" }}>Epochs</label>
+                  <input
+                    type="number"
+                    value={epochs}
+                    min={1}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setEpochs(!isNaN(val) && val >= 1 ? val : 1);
+                    }}
+                    style={{ width: "100%", padding: "5px", border: "1px solid #e0e0e0", borderRadius: "4px" }}
+                  />
+                </div>
+                <button
+                  onClick={() => {
+                    if (isTraining && !isPaused) {
+                      handlePause();
+                    } else {
+                      handlePlay(epochs);
+                    }
+                  }}
+                  disabled={dataset.inputs.length === 0}
+                  style={{ 
+                    padding: "10px 20px", 
+                    backgroundColor: (isTraining && !isPaused) ? "#f57c00" : "#1976d2", 
+                    color: "white", 
+                    border: "none", 
+                    borderRadius: "4px", 
+                    cursor: dataset.inputs.length > 0 ? "pointer" : "not-allowed",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    opacity: dataset.inputs.length > 0 ? 1 : 0.5
+                  }}
+                >
+                  {isTraining && !isPaused ? "Pause" : "Play"}
+                </button>
+                <button
+                  onClick={handleStop}
+                  disabled={!isTraining}
+                  style={{ 
+                    padding: "10px 20px", 
+                    backgroundColor: "#d32f2f", 
+                    color: "white", 
+                    border: "none", 
+                    borderRadius: "4px", 
+                    cursor: isTraining ? "pointer" : "not-allowed",
+                    fontSize: "14px",
+                    fontWeight: "500",
+                    opacity: isTraining ? 1 : 0.5
+                  }}
+                >
+                  Stop
+                </button>
+              </div>
               {loss && (
-                <p style={{ marginTop: "15px", color: "#2e7d32", fontSize: "14px", fontWeight: "500" }}>Loss: {loss}</p>
+                <p style={{ marginTop: "10px", color: "#2e7d32", fontSize: "14px", fontWeight: "500", textAlign: "center" }}>Loss: {loss}</p>
               )}
               {outputs.length > 0 && (
-                <div style={{ marginTop: "15px" }}>
-                  <p style={{ color: "#2e7d32", fontSize: "14px", fontWeight: "500" }}>
-                    Predictions: {outputs.join(", ")}
-                  </p>
-                </div>
+                <p style={{ marginTop: "10px", color: "#2e7d32", fontSize: "14px", fontWeight: "500", textAlign: "center" }}>
+                  Predictions: {outputs.join(", ")}
+                </p>
               )}
             </>
           )}
         </div>
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "20px" }}>
+        
+        {/* Right: Network Edit Options */}
+        <div className="panel" style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          {dataset.inputs.length > 0 && (
+            <NetworkControls
+              hiddenLayers={hiddenLayers}
+              setHiddenLayers={setHiddenLayers}
+              inputNeurons={inputNeurons}
+              setInputNeurons={setInputNeurons}
+              outputNeurons={outputNeurons}
+              setOutputNeurons={setOutputNeurons}
+              activationFunction={activationFunction}
+              setActivationFunction={setActivationFunction}
+              problemType={problemType}
+              setProblemType={setProblemType}
+              showWeights={showWeights}
+              setShowWeights={setShowWeights}
+              onPredict={predict}
+              lineThicknessMode={lineThicknessMode}
+              setLineThicknessMode={setLineThicknessMode}
+              zoomLevel={zoomLevel}
+              setZoomLevel={setZoomLevel}
+              animationSpeed={animationSpeed}
+              setAnimationSpeed={setAnimationSpeed}
+              learningRate={learningRate}
+              setLearningRate={setLearningRate}
+              hasDataset={dataset.inputs.length > 0}
+              epochs={epochs}
+              setEpochs={setEpochs}
+            />
+          )}
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "row", gap: "20px", alignItems: "flex-start" }}>
           <div
             className="graph-panel"
             ref={graphPanelRef}
             style={{
               position: "relative",
-              overflow: "auto",
-              minHeight: "500px",
-              maxHeight: "70vh",
+              overflow: "visible",
+              flex: "1 1 70%",
               backgroundColor: "#ffffff",
               border: "1px solid #e0e0e0",
               borderRadius: "8px",
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              padding: "0", // No padding
             }}
           >
             {inputNeurons > 0 && outputNeurons > 0 ? (
@@ -1129,28 +1260,32 @@ const NeuralNetworkVisualizer = React.memo(() => {
             )}
           </div>
           
-          {/* Loss Chart below the network */}
+          {/* Loss Chart beside the network */}
           {dataset.inputs.length > 0 && lossHistory.length > 0 && (
             <div style={{
               backgroundColor: "#ffffff",
               border: "1px solid #e0e0e0",
               borderRadius: "8px",
-              padding: "10px",
-              height: "240px",
-              width: "480px"
+              padding: "15px",
+              height: "500px",
+              width: "400px",
+              flex: "0 0 400px",
+              display: "flex",
+              flexDirection: "column"
             }}>
               <h3 style={{ 
-                margin: "0 0 8px 0", 
+                margin: "0 0 10px 0", 
                 color: "#212121", 
                 fontWeight: "500", 
                 fontSize: "14px" 
               }}>
                 Training Progress
               </h3>
-              <LossChart lossHistory={lossHistory} problemType={problemType} />
+              <div style={{ flex: "1", minHeight: 0 }}>
+                <LossChart lossHistory={lossHistory} problemType={problemType} />
+              </div>
             </div>
           )}
-        </div>
       </div>
     </div>
   );
