@@ -149,6 +149,7 @@ interface Props {
   const totalParams = calculateTotalParameters();
   const outputEquations = getOutputEquations();
 
+<<<<<<< HEAD
 
   const paddingX = 25; 
   const minX = Math.min(...positions.map(p => p.x)) - paddingX;
@@ -178,6 +179,14 @@ interface Props {
     ? eqStartY + (outputEquations.length - 1) * eqLineGap + eqFontSize 
     : graphBottomY; 
   const totalMaxY = Math.max(maxY, equationsHeight) + 3; 
+=======
+  const svgWidth = Math.max(layerSizes.length * 150 + 100, 800);
+  const svgHeight = Math.max(Math.max(...layerSizes) * 100 + 250, 600);
+
+  const footerY = svgHeight - 30;    
+  const eqStartY = footerY + 18;       
+  const eqLineGap = 16
+>>>>>>> 03015f1a206250c6962c3d39c7bdcb143ec6b587
 
   const getBezierPoint = (
     t: number,
@@ -443,11 +452,19 @@ interface Props {
 
       {/* Footer text centered at top */}
       <text
+<<<<<<< HEAD
         x={centerXForText}
         y={footerY}
         textAnchor="middle"
         dominantBaseline="hanging"
         fontSize={footerFontSize}
+=======
+        x={0}
+        y={footerY}
+        textAnchor="start"
+        dominantBaseline="middle"
+        fontSize="12"
+>>>>>>> 03015f1a206250c6962c3d39c7bdcb143ec6b587
         fill="#333"
         fontFamily="Arial, sans-serif"
       >
@@ -461,11 +478,19 @@ interface Props {
         outputEquations.map((equation, index) => (
           <g key={index}>
             <text
+<<<<<<< HEAD
               x={centerXForText}
               y={eqStartY + index * eqLineGap}
               textAnchor="middle"
               dominantBaseline="hanging"
               fontSize={eqFontSize}
+=======
+              x={0}
+              y={eqStartY + index * eqLineGap}
+              textAnchor="start"
+              dominantBaseline="middle"
+              fontSize="14"
+>>>>>>> 03015f1a206250c6962c3d39c7bdcb143ec6b587
               fill="#333"
             >
               {truncateEquation(equation)}
