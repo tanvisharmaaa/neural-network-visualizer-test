@@ -163,16 +163,14 @@ interface Props {
   
   const svgWidth = contentWidth;
 
-  
   const graphTopY = minY;
   const graphBottomY = maxY;
-  const centerXForText = (minX + maxX) / 2; 
-  const footerFontSize = 8; 
-  const eqFontSize = 8; 
-  const footerY = graphTopY - 1; 
-  const eqStartY = graphBottomY + 1; 
-  const eqLineGap = 12 
-  
+  const centerXForText = (minX + maxX) / 2;
+  const footerFontSize = 8;
+  const eqFontSize = 8;
+  const footerY = graphTopY - 1;
+  const eqStartY = graphBottomY + 1;
+  const eqLineGap = 12;
 
   const totalMinY = Math.min(minY, footerY) - 3; 
   const equationsHeight = outputEquations.length > 0 
@@ -195,9 +193,8 @@ interface Props {
     return { x, y };
   };
 
-  
   const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2; 
+  const centerY = (minY + maxY) / 2;
 
   return (
     <svg

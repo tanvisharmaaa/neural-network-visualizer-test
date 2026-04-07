@@ -116,7 +116,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
   const [lineThicknessMode, setLineThicknessMode] = useState<"auto" | "fixed">(
     "auto"
   );
-  const [zoomLevel, setZoomLevel] = useState(0.21); // Zoomed out by 30% (0.3 * 0.7 = 0.21)
+  const [zoomLevel, setZoomLevel] = useState(0.3); // 30% display scale
   const [model, setModel] = useState<tf.Sequential | null>(null);
   const [dataset, setDataset] = useState<{
     inputs: number[][];
@@ -137,6 +137,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
   const [outputMin, setOutputMin] = useState<number[]>([]);
   const [outputMax, setOutputMax] = useState<number[]>([]);
   const graphPanelRef = useRef<HTMLDivElement>(null);
+  const toolSectionRef = useRef<HTMLDivElement>(null);
   const trainingInitiated = useRef(false);
   const stopTrainingRef = useRef(false);
   const cancelAnimationRef = useRef(false);
@@ -998,16 +999,118 @@ const NeuralNetworkVisualizer = React.memo(() => {
   return (
     <div
       style={{
-        padding: "20px",
-        backgroundColor: "#ffffff",
+        fontFamily:
+          "system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
         minHeight: "100vh",
-        fontFamily: "Roboto, Helvetica Neue, Arial, sans-serif"
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      <h1 style={{ textAlign: "center", fontSize: "32px", color: "#212121", fontWeight: "400", marginBottom: "30px", letterSpacing: "-0.02em" }}>
-        NeuroViz
-      </h1>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", gap: "20px", marginBottom: "20px" }}>
+      <section
+        className="landing-hero"
+        aria-label="Introduction"
+        style={{
+          flexShrink: 0,
+          padding: "clamp(48px, 10vw, 88px) clamp(24px, 5vw, 48px)",
+          backgroundColor: "#f6f8fa",
+          borderBottom: "1px solid #e8eaed",
+        }}
+      >
+        <div
+          style={{
+            maxWidth: "960px",
+            margin: "0 auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: "clamp(24px, 4vw, 48px)",
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "flex-start",
+              alignItems: "center",
+            }}
+          >
+            <img
+              src="/neuroviz-logo.png"
+              alt="NeuroViz"
+              style={{
+                display: "block",
+                width: "100%",
+                maxWidth: "320px",
+                height: "auto",
+              }}
+            />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h1
+              style={{
+                margin: "0 0 20px",
+                fontSize: "clamp(1.75rem, 4vw, 2.25rem)",
+                fontWeight: 500,
+                letterSpacing: "-0.03em",
+                lineHeight: 1.2,
+                color: "#1f2937",
+              }}
+            >
+              See neural networks think.
+            </h1>
+            <p
+              style={{
+                margin: "0 0 24px",
+                fontSize: "15px",
+                lineHeight: 1.65,
+                color: "#4b5563",
+                fontWeight: 400,
+              }}
+            >
+              An interactive, browser-based tool for visualizing neural network
+              architectures, training dynamics, and learned representations. Built
+              with React and TensorFlow.js.
+            </p>
+            <p
+              style={{
+                margin: "0 0 28px",
+                fontSize: "15px",
+                lineHeight: 1.7,
+                color: "#374151",
+                fontWeight: 400,
+              }}
+            >
+              NeuroViz lets you design neural network architectures, train them on
+              sample datasets in real time, and inspect what’s happening at
+              every layer — activations, weights, gradients — all running locally
+              in your browser. No installation required.
+            </p>
+            <button
+              type="button"
+              className="landing-hero-button"
+              onClick={() =>
+                toolSectionRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                })
+              }
+            >
+              Start Exploring
+            </button>
+          </div>
+        </div>
+      </section>
+      <div
+        ref={toolSectionRef}
+        id="neuroviz-tool"
+        style={{
+          flex: 1,
+          padding: "20px",
+          backgroundColor: "#ffffff",
+          fontFamily:
+            "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+        }}
+      >
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "20px" }}>
         {/* Left: Dataset Selector */}
         <div className="panel" style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: "20px" }}>
           <DatasetSelector
@@ -1096,106 +1199,155 @@ const NeuralNetworkVisualizer = React.memo(() => {
           )}
         </div>
         
-        {/* Middle: Play/Pause/Stop Controls */}
-        <div className="panel" style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", display: "flex", flexDirection: "column", gap: "10px", alignItems: "center", justifyContent: "flex-start" }}>
+        {/* Right: Network options + training controls */}
+        <div
+          className="panel"
+          style={{
+            padding: "20px",
+            border: "1px solid #e0e0e0",
+            borderRadius: "8px",
+            backgroundColor: "#fafafa",
+            fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0",
+          }}
+        >
           {dataset.inputs.length > 0 && (
             <>
-              <div style={{ marginTop: "auto", display: "flex", gap: "10px", flexDirection: "column", width: "100%" }}>
-                <div style={{ marginBottom: "10px" }}>
-                  <label style={{ display: "block", marginBottom: "5px", fontSize: "12px", color: "#424242" }}>Epochs</label>
-                  <input
-                    type="number"
-                    value={epochs}
-                    min={1}
-                    onChange={(e) => {
-                      const val = parseInt(e.target.value);
-                      setEpochs(!isNaN(val) && val >= 1 ? val : 1);
-                    }}
-                    style={{ width: "100%", padding: "5px", border: "1px solid #e0e0e0", borderRadius: "4px" }}
-                  />
+              <NetworkControls
+                hiddenLayers={hiddenLayers}
+                setHiddenLayers={setHiddenLayers}
+                inputNeurons={inputNeurons}
+                setInputNeurons={setInputNeurons}
+                outputNeurons={outputNeurons}
+                setOutputNeurons={setOutputNeurons}
+                activationFunction={activationFunction}
+                setActivationFunction={setActivationFunction}
+                problemType={problemType}
+                setProblemType={setProblemType}
+                showWeights={showWeights}
+                setShowWeights={setShowWeights}
+                onPredict={predict}
+                lineThicknessMode={lineThicknessMode}
+                setLineThicknessMode={setLineThicknessMode}
+                zoomLevel={zoomLevel}
+                setZoomLevel={setZoomLevel}
+                animationSpeed={animationSpeed}
+                setAnimationSpeed={setAnimationSpeed}
+                learningRate={learningRate}
+                setLearningRate={setLearningRate}
+                hasDataset={dataset.inputs.length > 0}
+                epochs={epochs}
+                setEpochs={setEpochs}
+              />
+              <div
+                style={{
+                  marginTop: "20px",
+                  paddingTop: "16px",
+                  borderTop: "1px solid #e8eaed",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "10px",
+                  width: "100%",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    color: "#757575",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  Run training
                 </div>
-                <button
-                  onClick={() => {
-                    if (isTraining && !isPaused) {
-                      handlePause();
-                    } else {
-                      handlePlay(epochs);
-                    }
-                  }}
-                  disabled={dataset.inputs.length === 0}
-                  style={{ 
-                    padding: "10px 20px", 
-                    backgroundColor: (isTraining && !isPaused) ? "#f57c00" : "#1976d2", 
-                    color: "white", 
-                    border: "none", 
-                    borderRadius: "4px", 
-                    cursor: dataset.inputs.length > 0 ? "pointer" : "not-allowed",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    opacity: dataset.inputs.length > 0 ? 1 : 0.5
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "row",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    alignItems: "center",
                   }}
                 >
-                  {isTraining && !isPaused ? "Pause" : "Play"}
-                </button>
-                <button
-                  onClick={handleStop}
-                  disabled={!isTraining}
-                  style={{ 
-                    padding: "10px 20px", 
-                    backgroundColor: "#d32f2f", 
-                    color: "white", 
-                    border: "none", 
-                    borderRadius: "4px", 
-                    cursor: isTraining ? "pointer" : "not-allowed",
-                    fontSize: "14px",
-                    fontWeight: "500",
-                    opacity: isTraining ? 1 : 0.5
-                  }}
-                >
-                  Stop
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isTraining && !isPaused) {
+                        handlePause();
+                      } else {
+                        handlePlay(epochs);
+                      }
+                    }}
+                    disabled={dataset.inputs.length === 0}
+                    style={{
+                      width: "auto",
+                      marginBottom: 0,
+                      padding: "8px 16px",
+                      backgroundColor:
+                        isTraining && !isPaused ? "#f57c00" : "#1976d2",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor:
+                        dataset.inputs.length > 0 ? "pointer" : "not-allowed",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      opacity: dataset.inputs.length > 0 ? 1 : 0.5,
+                    }}
+                  >
+                    {isTraining && !isPaused ? "Pause" : "Play"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleStop}
+                    disabled={!isTraining}
+                    style={{
+                      width: "auto",
+                      marginBottom: 0,
+                      padding: "8px 16px",
+                      backgroundColor: "#d32f2f",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "4px",
+                      cursor: isTraining ? "pointer" : "not-allowed",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      opacity: isTraining ? 1 : 0.5,
+                    }}
+                  >
+                    Stop
+                  </button>
+                </div>
+                {loss && (
+                  <p
+                    style={{
+                      margin: "4px 0 0",
+                      color: "#2e7d32",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Loss: {loss}
+                  </p>
+                )}
+                {outputs.length > 0 && (
+                  <p
+                    style={{
+                      margin: 0,
+                      color: "#2e7d32",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                    }}
+                  >
+                    Predictions: {outputs.join(", ")}
+                  </p>
+                )}
               </div>
-              {loss && (
-                <p style={{ marginTop: "10px", color: "#2e7d32", fontSize: "14px", fontWeight: "500", textAlign: "center" }}>Loss: {loss}</p>
-              )}
-              {outputs.length > 0 && (
-                <p style={{ marginTop: "10px", color: "#2e7d32", fontSize: "14px", fontWeight: "500", textAlign: "center" }}>
-                  Predictions: {outputs.join(", ")}
-                </p>
-              )}
             </>
-          )}
-        </div>
-        
-        {/* Right: Network Edit Options */}
-        <div className="panel" style={{ padding: "20px", border: "1px solid #e0e0e0", borderRadius: "8px", backgroundColor: "#fafafa", fontFamily: "'Roboto', 'Helvetica Neue', Arial, sans-serif", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          {dataset.inputs.length > 0 && (
-            <NetworkControls
-              hiddenLayers={hiddenLayers}
-              setHiddenLayers={setHiddenLayers}
-              inputNeurons={inputNeurons}
-              setInputNeurons={setInputNeurons}
-              outputNeurons={outputNeurons}
-              setOutputNeurons={setOutputNeurons}
-              activationFunction={activationFunction}
-              setActivationFunction={setActivationFunction}
-              problemType={problemType}
-              setProblemType={setProblemType}
-              showWeights={showWeights}
-              setShowWeights={setShowWeights}
-              onPredict={predict}
-              lineThicknessMode={lineThicknessMode}
-              setLineThicknessMode={setLineThicknessMode}
-              zoomLevel={zoomLevel}
-              setZoomLevel={setZoomLevel}
-              animationSpeed={animationSpeed}
-              setAnimationSpeed={setAnimationSpeed}
-              learningRate={learningRate}
-              setLearningRate={setLearningRate}
-              hasDataset={dataset.inputs.length > 0}
-              epochs={epochs}
-              setEpochs={setEpochs}
-            />
           )}
         </div>
       </div>
@@ -1286,6 +1438,7 @@ const NeuralNetworkVisualizer = React.memo(() => {
               </div>
             </div>
           )}
+      </div>
       </div>
     </div>
   );
