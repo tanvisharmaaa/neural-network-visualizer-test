@@ -1030,32 +1030,40 @@ const NeuralNetworkVisualizer = React.memo(() => {
             style={{
               display: "flex",
               justifyContent: "flex-start",
-              alignItems: "center",
+              alignItems: "flex-start",
             }}
           >
-            <img
-              src="/neuroviz-logo.png"
-              alt="NeuroViz"
+            <p
               style={{
-                display: "block",
-                width: "100%",
-                maxWidth: "320px",
-                height: "auto",
+                margin: 0,
+                fontSize: "clamp(2rem, 5vw, 2.75rem)",
+                fontWeight: 600,
+                letterSpacing: "-0.04em",
+                lineHeight: 1.1,
+                display: "inline-block",
+                backgroundImage:
+                  "linear-gradient(100deg, #1a5f6d 0%, #1a5f6d 32%, #7c3aed 58%, #22d3ee 100%)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+                WebkitTextFillColor: "transparent",
               }}
-            />
+            >
+              NeuroViz
+            </p>
           </div>
           <div style={{ minWidth: 0 }}>
             <h1
               style={{
                 margin: "0 0 20px",
-                fontSize: "clamp(1.75rem, 4vw, 2.25rem)",
+                fontSize: "clamp(1.5rem, 3.5vw, 1.875rem)",
                 fontWeight: 500,
-                letterSpacing: "-0.03em",
-                lineHeight: 1.2,
+                letterSpacing: "-0.02em",
+                lineHeight: 1.35,
                 color: "#1f2937",
               }}
             >
-              See neural networks think.
+              Illustrating the thinking process of a neural network
             </h1>
             <p
               style={{
