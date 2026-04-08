@@ -14,52 +14,8 @@ An interactive web application for visualizing neural network training with real
 
 ## Live Demo
 
-The application is deployed on GitHub Pages: [https://tanvisharmaaa.github.io/neural-network-visualizer-test/](https://tanvisharmaaa.github.io/neural-network-visualizer-test/)
+The application is deployed on GitHub Pages: [https://neuroviz.org](https://neuroviz.org)
 
-## Local Development
-
-1. Clone the repository:
-```bash
-git clone https://github.com/tanvisharmaaa/neural-network-visualizer-test.git
-cd neural-network-visualizer-test
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Start the development server:
-```bash
-npm run dev
-```
-
-4. Open [http://localhost:5173](http://localhost:5173) in your browser.
-
-## Building for Production
-
-```bash
-npm run build
-```
-
-The built files will be in the `dist` directory.
-
-## Deployment
-
-This project is automatically deployed to GitHub Pages using GitHub Actions. The deployment workflow:
-
-1. Triggers on pushes to the `main` branch
-2. Builds the project using `npm run build`
-3. Deploys the built files to GitHub Pages
-
-### Manual Deployment Setup
-
-If you need to set up GitHub Pages manually:
-
-1. Go to your repository settings
-2. Navigate to "Pages" in the sidebar
-3. Under "Source", select "GitHub Actions"
-4. The workflow will automatically deploy on the next push to `main`
 
 ## Technologies Used
 
